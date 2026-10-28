@@ -1,0 +1,9 @@
+**/node_modules
+**/dist
+**/.turbo
+**/coverage
+.git
+.idea
+.env
+.env.*
+!.env.example

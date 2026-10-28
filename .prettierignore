@@ -1,0 +1,6 @@
+dist/
+.turbo/
+coverage/
+.idea/
+pnpm-lock.yaml
+apps/web/src/components/ui/
