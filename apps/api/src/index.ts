@@ -5,7 +5,7 @@ import { createLogger } from './logger.js';
 
 const env = loadEnv();
 const logger = createLogger(env);
-const database = createDb(env.DATABASE_URL);
+const database = createDb(env.DATABASE_URL, logger);
 
 const app = createApp({ logger, pingDb: database.ping, webDistDir: env.WEB_DIST_DIR });
 
