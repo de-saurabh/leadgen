@@ -1,0 +1,83 @@
+import { useQueryClient } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
+import { NavLink, Navigate, Outlet, useNavigate } from 'react-router';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useMe } from '@/features/session/me';
+import { authClient } from '@/lib/auth-client';
+
+/** Everything behind login: redirects anonymous visitors and renders the shared chrome. */
+export function AppLayout() {
+  const me = useMe();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  if (me.isPending) return <p className="text-muted-foreground p-6 text-sm">Loading…</p>;
+  if (!me.data) return <Navigate to="/login" replace />;
+  const { user, business, role, isPlatformAdmin, impersonatedBy } = me.data;
+
+  async function signOut() {
+    await authClient.signOut();
+    queryClient.clear();
+    navigate('/login', { replace: true });
+  }
+
+  async function stopImpersonating() {
+    await authClient.admin.stopImpersonating();
+    await queryClient.invalidateQueries();
+    navigate('/', { replace: true });
+  }
+
+  return (
+    <div className="min-h-svh">
+      {impersonatedBy && (
+        <div className="flex items-center justify-center gap-3 bg-amber-100 px-4 py-2 text-sm text-amber-950">
+          <span>
+            Viewing as <strong>{user.name}</strong>
+          </span>
+          <Button size="sm" variant="outline" onClick={stopImpersonating}>
+            Exit
+          </Button>
+        </div>
+      )}
+      <header className="border-b">
+        <div className="mx-auto flex max-w-5xl items-center gap-4 px-6 py-3">
+          <span className="font-semibold tracking-tight">LeadGen</span>
+          {business && (
+            <span className="text-muted-foreground flex items-center gap-2 text-sm">
+              {business.name}
+              {role && <Badge variant="secondary">{business.roleLabel ?? role}</Badge>}
+            </span>
+          )}
+          <nav className="ml-4 flex gap-4 text-sm">
+            {business && <NavItem to="/">Home</NavItem>}
+            {isPlatformAdmin && <NavItem to="/admin">Businesses</NavItem>}
+          </nav>
+          <div className="ml-auto flex items-center gap-3 text-sm">
+            <span className="text-muted-foreground hidden sm:inline">{user.email}</span>
+            <Button size="sm" variant="outline" onClick={signOut}>
+              Sign out
+            </Button>
+          </div>
+        </div>
+      </header>
+      <main className="mx-auto max-w-5xl p-6">
+        <Outlet />
+      </main>
+    </div>
+  );
+}
+
+function NavItem({ to, children }: { to: string; children: ReactNode }) {
+  return (
+    <NavLink
+      to={to}
+      end
+      className={({ isActive }) =>
+        isActive ? 'font-medium' : 'text-muted-foreground hover:text-foreground'
+      }
+    >
+      {children}
+    </NavLink>
+  );
+}
