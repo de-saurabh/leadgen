@@ -285,11 +285,18 @@ Times are stored in UTC and displayed in the business's timezone.
 
 ## 7. Milestones
 
-**Status:** M0 and M1 are done. Notes on how M1 differs from the plan:
+**Status:** M0, M1 and M2 are done. Notes on how M1 differs from the plan:
 
 - **Owners are created with credentials, not invited.** There's no email sending in the POC, so the admin creates the owner account and gets a generated password to hand over (shown once). Invitations by link arrive with team management (M7).
 - **Tables arrive with the milestone that needs them.** M1 migrated the auth tables and `business_settings` only; WhatsApp numbers, campaigns, resources, leads and bookings are added in M3–M5.
 - **Self-service sign-up and business creation are blocked over HTTP** (a Better Auth `before` hook); only the platform admin's routes create accounts and businesses.
+
+M2 notes:
+
+- `name`, `phone` and `consent` are implicit, so a campaign's question list holds only the custom questions (those keys are reserved).
+- Choice answers are stored as option ids and shown as labels through `displayAnswers`.
+- Validation issues carry a severity. A missing reminder template is a warning, not a blocker, so test-mode demo campaigns still publish.
+- Dates are read as `YYYY-MM-DD` or `DD/MM/YYYY`.
 
 Each milestone ends in something demoable.
 
