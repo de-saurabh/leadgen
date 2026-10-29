@@ -12,6 +12,12 @@ export default defineConfig([
   js.configs.recommended,
   tseslint.configs.recommended,
   {
+    rules: {
+      // Express error handlers must declare all four args to be recognised as such.
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+    },
+  },
+  {
     files: ['apps/api/**', 'packages/**', '*.js', '**/vite.config.ts', '**/vitest.config.ts'],
     languageOptions: { globals: globals.node },
   },

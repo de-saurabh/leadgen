@@ -7,6 +7,22 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: leadgen
+          POSTGRES_PASSWORD: leadgen
+          POSTGRES_DB: leadgen_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U leadgen -d leadgen_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgres://leadgen:leadgen@localhost:5433/leadgen_test
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
