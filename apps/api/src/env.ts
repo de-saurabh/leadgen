@@ -19,6 +19,21 @@ const EnvSchema = z.object({
   /** Optional: seeds the platform admin on boot / via the seed:admin script. */
   PLATFORM_ADMIN_EMAIL: z.email().optional(),
   PLATFORM_ADMIN_PASSWORD: z.string().min(8).optional(),
+  /** Encrypts WhatsApp access tokens at rest: 32 random bytes, base64. Generate with: openssl rand -base64 32 */
+  TOKEN_ENCRYPTION_KEY: z
+    .string()
+    .refine((key) => Buffer.from(key, 'base64').length === 32, 'must be 32 bytes, base64-encoded')
+    .optional(),
+  /** Verifies webhook signatures. Strongly recommended; unset only for local experiments. */
+  META_APP_SECRET: z.string().min(1).optional(),
+  /** The string you enter in Meta's webhook setup; echoed back during verification. */
+  META_VERIFY_TOKEN: z.string().min(8).optional(),
+  GRAPH_API_VERSION: z
+    .string()
+    .regex(/^v\d+\.\d+$/)
+    .default('v26.0'),
+  /** `test` sends only Meta's pre-approved hello_world template; `live` uses the campaign's templates. */
+  WHATSAPP_TEMPLATE_MODE: z.enum(['test', 'live']).default('test'),
   /** When set, the API also serves the built dashboard from this directory (single-service deploys). */
   WEB_DIST_DIR: z.string().min(1).optional(),
 });

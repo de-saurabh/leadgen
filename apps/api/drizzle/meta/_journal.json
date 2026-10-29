@@ -8,6 +8,13 @@
       "when": 1793282950575,
       "tag": "0000_init_auth_and_business",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793288920213,
+      "tag": "0001_campaigns_leads_whatsapp",
+      "breakpoints": true
     }
   ]
 }

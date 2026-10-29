@@ -15,6 +15,8 @@ describe('parseEnv', () => {
       BETTER_AUTH_SECRET,
       BETTER_AUTH_URL: 'http://localhost:3000',
       WEB_ORIGIN: 'http://localhost:5173',
+      GRAPH_API_VERSION: 'v26.0',
+      WHATSAPP_TEMPLATE_MODE: 'test',
     });
   });
 
@@ -46,5 +48,17 @@ describe('parseEnv', () => {
       PLATFORM_ADMIN_PASSWORD: 'longenough',
     });
     expect(env.PLATFORM_ADMIN_EMAIL).toBe('a@b.co');
+  });
+
+  it('validates the WhatsApp settings', () => {
+    expect(() => parseEnv({ ...base, TOKEN_ENCRYPTION_KEY: 'too-short' })).toThrow(
+      /TOKEN_ENCRYPTION_KEY/,
+    );
+    expect(() => parseEnv({ ...base, WHATSAPP_TEMPLATE_MODE: 'demo' })).toThrow(
+      /WHATSAPP_TEMPLATE_MODE/,
+    );
+    expect(() => parseEnv({ ...base, GRAPH_API_VERSION: '26' })).toThrow(/GRAPH_API_VERSION/);
+    const key = Buffer.alloc(32, 1).toString('base64');
+    expect(parseEnv({ ...base, TOKEN_ENCRYPTION_KEY: key }).TOKEN_ENCRYPTION_KEY).toBe(key);
   });
 });
