@@ -10,6 +10,7 @@ import { businessRouter } from './routes/business.js';
 import { campaignsRouter } from './routes/campaigns.js';
 import { healthRouter } from './routes/health.js';
 import { meRouter } from './routes/me.js';
+import { publicFormRouter } from './routes/publicForm.js';
 import { whatsappNumbersRouter } from './routes/whatsappNumbers.js';
 import type { SecretBox } from './services/crypto.js';
 
@@ -20,10 +21,20 @@ export interface AppDeps {
   pingDb: () => Promise<void>;
   /** Encrypts stored WhatsApp tokens; absent when TOKEN_ENCRYPTION_KEY isn't set. */
   secretBox?: SecretBox | undefined;
+  /** Called with the new lead id after a form submission is saved. */
+  onLeadCreated?: ((leadId: string) => void) | undefined;
   webDistDir?: string | undefined;
 }
 
-export function createApp({ logger, db, auth, pingDb, secretBox, webDistDir }: AppDeps) {
+export function createApp({
+  logger,
+  db,
+  auth,
+  pingDb,
+  secretBox,
+  onLeadCreated,
+  webDistDir,
+}: AppDeps) {
   const app = express();
   app.disable('x-powered-by');
 
@@ -51,6 +62,8 @@ export function createApp({ logger, db, auth, pingDb, secretBox, webDistDir }: A
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: 'not_found' });
   });
+
+  app.use(publicFormRouter({ db, onLeadCreated }));
 
   if (webDistDir) {
     const root = path.resolve(webDistDir);

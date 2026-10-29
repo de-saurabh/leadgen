@@ -56,7 +56,9 @@ export class TestClient {
   }
 }
 
-export async function createTestContext(overrides: { pingDb?: () => Promise<void> } = {}) {
+export async function createTestContext(
+  overrides: { pingDb?: () => Promise<void>; onLeadCreated?: (leadId: string) => void } = {},
+) {
   const database = createDb(TEST_DATABASE_URL, console);
   const { db } = database;
   const auth = createAuth(db, TEST_ENV);
@@ -72,6 +74,7 @@ export async function createTestContext(overrides: { pingDb?: () => Promise<void
     auth,
     pingDb: overrides.pingDb ?? database.ping,
     secretBox: createSecretBox(TEST_ENV.TOKEN_ENCRYPTION_KEY),
+    onLeadCreated: overrides.onLeadCreated,
   });
   const server = app.listen(0);
   await new Promise<void>((resolve) => server.once('listening', resolve));
