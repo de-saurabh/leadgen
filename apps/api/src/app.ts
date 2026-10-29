@@ -11,7 +11,9 @@ import { campaignsRouter } from './routes/campaigns.js';
 import { healthRouter } from './routes/health.js';
 import { meRouter } from './routes/me.js';
 import { publicFormRouter } from './routes/publicForm.js';
+import { webhookRouter } from './routes/webhook.js';
 import { whatsappNumbersRouter } from './routes/whatsappNumbers.js';
+import type { ConversationService } from './services/conversations.js';
 import type { SecretBox } from './services/crypto.js';
 
 export interface AppDeps {
@@ -23,6 +25,10 @@ export interface AppDeps {
   secretBox?: SecretBox | undefined;
   /** Called with the new lead id after a form submission is saved. */
   onLeadCreated?: ((leadId: string) => void) | undefined;
+  /** Handles inbound WhatsApp messages; webhooks are acknowledged but ignored without it. */
+  conversations?: ConversationService | undefined;
+  metaVerifyToken?: string | undefined;
+  metaAppSecret?: string | undefined;
   webDistDir?: string | undefined;
 }
 
@@ -33,6 +39,9 @@ export function createApp({
   pingDb,
   secretBox,
   onLeadCreated,
+  conversations,
+  metaVerifyToken,
+  metaAppSecret,
   webDistDir,
 }: AppDeps) {
   const app = express();
@@ -42,6 +51,18 @@ export function createApp({
     pinoHttp({
       logger,
       autoLogging: { ignore: (req) => req.url === '/api/health' },
+    }),
+  );
+
+  // Webhook signatures cover the raw bytes, so it comes before express.json().
+  app.use(
+    webhookRouter({
+      logger,
+      verifyToken: metaVerifyToken,
+      appSecret: metaAppSecret,
+      process: async (parsed) => {
+        await conversations?.handleWebhook(parsed);
+      },
     }),
   );
 

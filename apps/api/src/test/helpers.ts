@@ -3,8 +3,10 @@ import { pino } from 'pino';
 import { createApp } from '../app.js';
 import { createAuth } from '../auth/auth.js';
 import { createDb } from '../db/client.js';
+import { createConversationService } from '../services/conversations.js';
 import { createSecretBox } from '../services/crypto.js';
 import { ensurePlatformAdmin } from '../services/platformAdmin.js';
+import type { GraphClient, SendTarget, SendableMessage } from '../whatsapp/graph.js';
 import { ADMIN, TEST_DATABASE_URL, TEST_ENV } from './constants.js';
 
 const TABLES = [
@@ -17,6 +19,27 @@ const TABLES = [
   'invitation',
   'business_settings',
 ];
+
+/** Stands in for Meta: records what would be sent, and can be told to fail. */
+export class FakeGraph implements GraphClient {
+  sent: Array<{ to: string; phoneNumberId: string; message: SendableMessage }> = [];
+  failNext = 0;
+  private counter = 0;
+
+  async send(target: SendTarget, to: string, message: SendableMessage) {
+    if (this.failNext > 0) {
+      this.failNext--;
+      throw new Error('simulated WhatsApp failure');
+    }
+    this.sent.push({ to, phoneNumberId: target.phoneNumberId, message });
+    return { waMessageId: `wamid.out.${++this.counter}` };
+  }
+
+  reset() {
+    this.sent = [];
+    this.failNext = 0;
+  }
+}
 
 /** Minimal cookie-keeping HTTP client that behaves like the dashboard (same-origin via proxy). */
 export class TestClient {
@@ -68,13 +91,31 @@ export async function createTestContext(
   );
   await ensurePlatformAdmin({ auth, db }, ADMIN);
 
+  const graph = new FakeGraph();
+  const box = createSecretBox(TEST_ENV.TOKEN_ENCRYPTION_KEY);
+  const conversations = createConversationService({
+    db,
+    box,
+    graph,
+    logger: pino({ level: 'silent' }),
+    templateMode: 'test',
+  });
+  const background: Promise<unknown>[] = [];
+
   const app = createApp({
     logger: pino({ level: 'silent' }),
     db,
     auth,
     pingDb: overrides.pingDb ?? database.ping,
-    secretBox: createSecretBox(TEST_ENV.TOKEN_ENCRYPTION_KEY),
-    onLeadCreated: overrides.onLeadCreated,
+    secretBox: box,
+    conversations,
+    metaVerifyToken: TEST_ENV.META_VERIFY_TOKEN,
+    metaAppSecret: TEST_ENV.META_APP_SECRET,
+    onLeadCreated:
+      overrides.onLeadCreated ??
+      ((leadId) => {
+        background.push(conversations.sendOpeningTemplate(leadId).catch(() => undefined));
+      }),
   });
   const server = app.listen(0);
   await new Promise<void>((resolve) => server.once('listening', resolve));
@@ -84,6 +125,12 @@ export async function createTestContext(
     db,
     auth,
     baseUrl,
+    graph,
+    conversations,
+    /** Waits for work the app started after responding (e.g. the opening template). */
+    async settle() {
+      await Promise.all(background.splice(0));
+    },
     client: () => new TestClient(baseUrl),
     async adminClient() {
       const client = new TestClient(baseUrl);

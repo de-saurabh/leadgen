@@ -6,7 +6,9 @@ import { runMigrations } from './db/migrate.js';
 import * as schema from './db/schema/index.js';
 import { loadEnv } from './env.js';
 import { createLogger } from './logger.js';
+import { createConversationService } from './services/conversations.js';
 import { createSecretBox } from './services/crypto.js';
+import { createDryRunGraphClient, createGraphClient } from './whatsapp/graph.js';
 import { ensurePlatformAdmin } from './services/platformAdmin.js';
 
 const env = loadEnv();
@@ -29,12 +31,36 @@ if (env.PLATFORM_ADMIN_EMAIL && env.PLATFORM_ADMIN_PASSWORD) {
   );
 }
 
+const secretBox = env.TOKEN_ENCRYPTION_KEY ? createSecretBox(env.TOKEN_ENCRYPTION_KEY) : undefined;
+const graph = env.WHATSAPP_DRY_RUN
+  ? createDryRunGraphClient((line) => logger.info(line))
+  : createGraphClient({ version: env.GRAPH_API_VERSION });
+const conversations = secretBox
+  ? createConversationService({
+      db,
+      box: secretBox,
+      graph,
+      logger,
+      templateMode: env.WHATSAPP_TEMPLATE_MODE,
+    })
+  : undefined;
+if (!conversations) logger.warn('TOKEN_ENCRYPTION_KEY is not set: WhatsApp is disabled');
+if (env.WHATSAPP_DRY_RUN) logger.warn('WHATSAPP_DRY_RUN is on: no messages are sent to Meta');
+
 const app = createApp({
   logger,
   db,
   auth,
   pingDb: database.ping,
-  secretBox: env.TOKEN_ENCRYPTION_KEY ? createSecretBox(env.TOKEN_ENCRYPTION_KEY) : undefined,
+  secretBox,
+  conversations,
+  metaVerifyToken: env.META_VERIFY_TOKEN,
+  metaAppSecret: env.META_APP_SECRET,
+  onLeadCreated: (leadId) => {
+    conversations
+      ?.sendOpeningTemplate(leadId)
+      .catch((err) => logger.error({ err, leadId }, 'could not send the opening template'));
+  },
   webDistDir: env.WEB_DIST_DIR,
 });
 

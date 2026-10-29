@@ -17,6 +17,7 @@ describe('parseEnv', () => {
       WEB_ORIGIN: 'http://localhost:5173',
       GRAPH_API_VERSION: 'v26.0',
       WHATSAPP_TEMPLATE_MODE: 'test',
+      WHATSAPP_DRY_RUN: false,
     });
   });
 

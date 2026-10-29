@@ -34,6 +34,8 @@ const EnvSchema = z.object({
     .default('v26.0'),
   /** `test` sends only Meta's pre-approved hello_world template; `live` uses the campaign's templates. */
   WHATSAPP_TEMPLATE_MODE: z.enum(['test', 'live']).default('test'),
+  /** Log outgoing WhatsApp messages instead of calling Meta, for trying the flow locally. */
+  WHATSAPP_DRY_RUN: z.stringbool().default(false),
   /** When set, the API also serves the built dashboard from this directory (single-service deploys). */
   WEB_DIST_DIR: z.string().min(1).optional(),
 });
