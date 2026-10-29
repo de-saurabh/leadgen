@@ -32,6 +32,23 @@ pnpm dev            # API on :3000, dashboard on :5173 (proxies /api to the API)
 
 Open http://localhost:5173 — the status page shows whether the API and database are reachable.
 
+## Trying WhatsApp
+
+**Without Meta (local, nothing is sent):** set `TOKEN_ENCRYPTION_KEY` (`openssl rand -base64 32`) and `WHATSAPP_DRY_RUN=true` in `.env`.
+Outgoing messages are logged by the API instead of sent. You can post sample customer messages to `/webhook` yourself.
+
+**With Meta's test number:**
+
+1. In the Meta app, add the WhatsApp product and note the test number's **Phone number ID** and a **temporary access token**. Add your own phone as a test recipient.
+2. Expose the API: `ngrok http 3000`.
+3. Set `TOKEN_ENCRYPTION_KEY`, `META_VERIFY_TOKEN` (any long string) and `META_APP_SECRET` (App settings, Basic) in `.env`, and leave `WHATSAPP_DRY_RUN` unset. Restart the API.
+4. In the Meta app, set the webhook callback URL to `https://<your-ngrok-host>/webhook` with your `META_VERIFY_TOKEN`, and subscribe to **messages**.
+5. Connect the number (as a business owner): `POST /api/whatsapp-numbers` with `phoneNumberId`, `displayNumber` and `accessToken`. The token is stored encrypted and never shown again.
+6. Create and publish a campaign (`POST /api/campaigns`, then `POST /api/campaigns/:id/publish`). The dashboard builder arrives in M4.
+7. Open `/f/<campaign-slug>`, submit the form with your test-recipient number, and tap **Continue on WhatsApp**.
+
+In test mode (`WHATSAPP_TEMPLATE_MODE=test`, the default) the only template sent is Meta's `hello_world`.
+
 ## Scripts
 
 | Command             | What it does                                        |

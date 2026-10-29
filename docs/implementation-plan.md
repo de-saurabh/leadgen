@@ -285,7 +285,7 @@ Times are stored in UTC and displayed in the business's timezone.
 
 ## 7. Milestones
 
-**Status:** M0, M1 and M2 are done. Notes on how M1 differs from the plan:
+**Status:** M0, M1 and M2 are done, and M3 is built (live Meta test pending). Notes on how M1 differs from the plan:
 
 - **Owners are created with credentials, not invited.** There's no email sending in the POC, so the admin creates the owner account and gets a generated password to hand over (shown once). Invitations by link arrive with team management (M7).
 - **Tables arrive with the milestone that needs them.** M1 migrated the auth tables and `business_settings` only; WhatsApp numbers, campaigns, resources, leads and bookings are added in M3–M5.
@@ -297,6 +297,15 @@ M2 notes:
 - Choice answers are stored as option ids and shown as labels through `displayAnswers`.
 - Validation issues carry a severity. A missing reminder template is a warning, not a blocker, so test-mode demo campaigns still publish.
 - Dates are read as `YYYY-MM-DD` or `DD/MM/YYYY`.
+
+M3 notes (built and tested against a fake Meta and in dry-run mode on the dev server; the live run with Meta's test number is still to do):
+
+- **No pg-boss yet.** The webhook acknowledges first and processes afterwards in the same process, serialised per lead by an advisory lock. The opening template is sent the same way. pg-boss arrives with M6, where reminders need scheduled jobs. The known gap: a crash between the acknowledgement and processing loses that message.
+- **Channel interface.** The engine returns channel-neutral messages and `services/conversations.ts` delivers them through a `GraphClient`. The M9 simulator will plug in at that seam.
+- **Numbers and campaigns have an API but no UI** until M4. Subscribing the Meta app to the number's webhooks stays a manual step in Meta.
+- **Booking questions hand over to a person** until M5 builds availability.
+- **Optional WhatsApp questions can't be skipped yet.** The bot asks every WhatsApp question.
+- **Spam on the public form** is limited to a honeypot field. Rate limiting is still to do.
 
 Each milestone ends in something demoable.
 
