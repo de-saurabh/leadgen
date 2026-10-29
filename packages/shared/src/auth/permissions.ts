@@ -1,4 +1,4 @@
-import { createAccessControl } from 'better-auth/plugins/access';
+import { createAccessControl, type AccessControl } from 'better-auth/plugins/access';
 import { defaultStatements } from 'better-auth/plugins/organization/access';
 
 /**
@@ -20,7 +20,9 @@ export const statement = {
   analytics: ['read'],
 } as const;
 
-export const ac = createAccessControl(statement);
+// Annotated so the emitted .d.ts stays assignable to Better Auth's own `AccessControl`
+// when the API builds against `dist` (the inferred type is not).
+export const ac: AccessControl = createAccessControl(statement);
 
 /** Full control of the business. */
 export const owner = ac.newRole({
