@@ -288,8 +288,8 @@ Times are stored in UTC and displayed in the business's timezone.
 **Status:** M0 and M1 are done. Notes on how M1 differs from the plan:
 
 - **Owners are created with credentials, not invited.** There's no email sending in the POC, so the admin creates the owner account and gets a generated password to hand over (shown once). Invitations by link arrive with team management (M7).
-- **Tables arrive with the milestone that needs them.** M1 migrated the auth tables and only; WhatsApp numbers, campaigns, resources, leads and bookings are added in M3–M5.
-- **Self-service sign-up and business creation are blocked over HTTP** (a Better Auth hook); only the platform admin's routes create accounts and businesses.
+- **Tables arrive with the milestone that needs them.** M1 migrated the auth tables and `business_settings` only; WhatsApp numbers, campaigns, resources, leads and bookings are added in M3–M5.
+- **Self-service sign-up and business creation are blocked over HTTP** (a Better Auth `before` hook); only the platform admin's routes create accounts and businesses.
 
 Each milestone ends in something demoable.
 
