@@ -7,18 +7,23 @@ import type { Auth, AppDb } from './auth/auth.js';
 import type { Logger } from './logger.js';
 import { adminRouter } from './routes/admin.js';
 import { businessRouter } from './routes/business.js';
+import { campaignsRouter } from './routes/campaigns.js';
 import { healthRouter } from './routes/health.js';
 import { meRouter } from './routes/me.js';
+import { whatsappNumbersRouter } from './routes/whatsappNumbers.js';
+import type { SecretBox } from './services/crypto.js';
 
 export interface AppDeps {
   logger: Logger;
   db: AppDb;
   auth: Auth;
   pingDb: () => Promise<void>;
+  /** Encrypts stored WhatsApp tokens; absent when TOKEN_ENCRYPTION_KEY isn't set. */
+  secretBox?: SecretBox | undefined;
   webDistDir?: string | undefined;
 }
 
-export function createApp({ logger, db, auth, pingDb, webDistDir }: AppDeps) {
+export function createApp({ logger, db, auth, pingDb, secretBox, webDistDir }: AppDeps) {
   const app = express();
   app.disable('x-powered-by');
 
@@ -39,6 +44,8 @@ export function createApp({ logger, db, auth, pingDb, webDistDir }: AppDeps) {
   api.use(loadAuthContext(auth, db));
   api.use(meRouter(db));
   api.use(businessRouter(db));
+  api.use(campaignsRouter(db));
+  api.use(whatsappNumbersRouter(db, secretBox));
   api.use('/admin', adminRouter({ auth, db }));
   app.use('/api', api);
   app.use('/api', (_req, res) => {

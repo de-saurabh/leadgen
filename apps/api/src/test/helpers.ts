@@ -3,6 +3,7 @@ import { pino } from 'pino';
 import { createApp } from '../app.js';
 import { createAuth } from '../auth/auth.js';
 import { createDb } from '../db/client.js';
+import { createSecretBox } from '../services/crypto.js';
 import { ensurePlatformAdmin } from '../services/platformAdmin.js';
 import { ADMIN, TEST_DATABASE_URL, TEST_ENV } from './constants.js';
 
@@ -70,6 +71,7 @@ export async function createTestContext(overrides: { pingDb?: () => Promise<void
     db,
     auth,
     pingDb: overrides.pingDb ?? database.ping,
+    secretBox: createSecretBox(TEST_ENV.TOKEN_ENCRYPTION_KEY),
   });
   const server = app.listen(0);
   await new Promise<void>((resolve) => server.once('listening', resolve));
@@ -94,3 +96,21 @@ export async function createTestContext(overrides: { pingDb?: () => Promise<void
 }
 
 export type TestContext = Awaited<ReturnType<typeof createTestContext>>;
+
+/** Creates a business through the admin API and returns a signed-in client for its owner. */
+export async function createBusinessWithOwner(
+  ctx: TestContext,
+  name: string,
+  ownerEmail: string,
+  overrides: { timezone?: string; defaultCountryCode?: string } = {},
+) {
+  const admin = await ctx.adminClient();
+  const res = await admin.request('/api/admin/businesses', {
+    json: { name, owner: { name: 'Owner', email: ownerEmail }, ...overrides },
+  });
+  if (res.status !== 201) throw new Error(`create business failed: ${res.status}`);
+  const owner = ctx.client();
+  const signedIn = await owner.signIn(ownerEmail, res.body.business.generatedOwnerPassword);
+  if (signedIn.status !== 200) throw new Error(`owner sign-in failed: ${signedIn.status}`);
+  return { id: res.body.business.id as string, slug: res.body.business.slug as string, owner };
+}

@@ -6,6 +6,7 @@ import { runMigrations } from './db/migrate.js';
 import * as schema from './db/schema/index.js';
 import { loadEnv } from './env.js';
 import { createLogger } from './logger.js';
+import { createSecretBox } from './services/crypto.js';
 import { ensurePlatformAdmin } from './services/platformAdmin.js';
 
 const env = loadEnv();
@@ -33,6 +34,7 @@ const app = createApp({
   db,
   auth,
   pingDb: database.ping,
+  secretBox: env.TOKEN_ENCRYPTION_KEY ? createSecretBox(env.TOKEN_ENCRYPTION_KEY) : undefined,
   webDistDir: env.WEB_DIST_DIR,
 });
 
