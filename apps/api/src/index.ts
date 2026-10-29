@@ -1,13 +1,40 @@
+import { drizzle } from 'drizzle-orm/node-postgres';
 import { createApp } from './app.js';
+import { createAuth } from './auth/auth.js';
 import { createDb } from './db/client.js';
+import { runMigrations } from './db/migrate.js';
+import * as schema from './db/schema/index.js';
 import { loadEnv } from './env.js';
 import { createLogger } from './logger.js';
+import { ensurePlatformAdmin } from './services/platformAdmin.js';
 
 const env = loadEnv();
 const logger = createLogger(env);
 const database = createDb(env.DATABASE_URL, logger);
 
-const app = createApp({ logger, pingDb: database.ping, webDistDir: env.WEB_DIST_DIR });
+await runMigrations(database);
+logger.info('database migrations up to date');
+
+const db = drizzle({ client: database.pool, schema });
+const auth = createAuth(db, env);
+
+if (env.PLATFORM_ADMIN_EMAIL && env.PLATFORM_ADMIN_PASSWORD) {
+  const { created } = await ensurePlatformAdmin(
+    { auth, db },
+    { email: env.PLATFORM_ADMIN_EMAIL, password: env.PLATFORM_ADMIN_PASSWORD },
+  );
+  logger.info(
+    `platform admin ${env.PLATFORM_ADMIN_EMAIL} ${created ? 'created' : 'already present'}`,
+  );
+}
+
+const app = createApp({
+  logger,
+  db,
+  auth,
+  pingDb: database.ping,
+  webDistDir: env.WEB_DIST_DIR,
+});
 
 const server = app.listen(env.PORT, () => {
   logger.info(`API listening on http://localhost:${env.PORT}`);

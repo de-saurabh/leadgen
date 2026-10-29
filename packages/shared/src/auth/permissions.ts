@@ -1,5 +1,5 @@
 import { createAccessControl } from 'better-auth/plugins/access';
-import { defaultStatements, memberAc, ownerAc } from 'better-auth/plugins/organization/access';
+import { defaultStatements } from 'better-auth/plugins/organization/access';
 
 /**
  * Business-level permissions. Role names are generic on purpose (a clinic's "receptionist"
@@ -24,7 +24,10 @@ export const ac = createAccessControl(statement);
 
 /** Full control of the business. */
 export const owner = ac.newRole({
-  ...ownerAc.statements,
+  // No organization:delete — businesses are created and removed by the platform admin only.
+  organization: ['update'],
+  member: ['create', 'update', 'delete'],
+  invitation: ['create', 'cancel'],
   settings: ['read', 'update'],
   whatsappNumber: ['read'],
   campaign: ['read', 'create', 'update', 'publish', 'delete'],
@@ -48,7 +51,6 @@ export const manager = ac.newRole({
 
 /** Sees and updates only the bookings on their own linked resources (scoped in queries). */
 export const member = ac.newRole({
-  ...memberAc.statements,
   booking: ['read', 'update'],
 });
 

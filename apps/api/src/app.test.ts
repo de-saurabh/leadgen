@@ -1,43 +1,34 @@
-import type { AddressInfo } from 'node:net';
-import { pino } from 'pino';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createApp } from './app.js';
+import { createTestContext, type TestContext } from './test/helpers.js';
 
-const logger = pino({ level: 'silent' });
-let close: (() => void) | undefined;
-
-async function start(pingDb: () => Promise<void>) {
-  const server = createApp({ logger, pingDb }).listen(0);
-  await new Promise<void>((resolve) => server.once('listening', resolve));
-  close = () => server.close();
-  return `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
-}
-
-afterEach(() => close?.());
+let ctx: TestContext;
+afterEach(() => ctx?.close());
 
 describe('GET /api/health', () => {
   it('reports ok when the database responds', async () => {
-    const base = await start(async () => {});
-    const res = await fetch(`${base}/api/health`);
+    ctx = await createTestContext();
+    const res = await ctx.client().request('/api/health');
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ status: 'ok', db: 'ok' });
+    expect(res.body).toEqual({ status: 'ok', db: 'ok' });
   });
 
   it('returns 503 when the database is unreachable', async () => {
-    const base = await start(async () => {
-      throw new Error('connection refused');
+    ctx = await createTestContext({
+      pingDb: async () => {
+        throw new Error('connection refused');
+      },
     });
-    const res = await fetch(`${base}/api/health`);
+    const res = await ctx.client().request('/api/health');
     expect(res.status).toBe(503);
-    expect(await res.json()).toEqual({ status: 'degraded', db: 'down' });
+    expect(res.body).toEqual({ status: 'degraded', db: 'down' });
   });
 });
 
 describe('unknown API routes', () => {
   it('return a JSON 404', async () => {
-    const base = await start(async () => {});
-    const res = await fetch(`${base}/api/nope`);
+    ctx = await createTestContext();
+    const res = await ctx.client().request('/api/nope');
     expect(res.status).toBe(404);
-    expect(await res.json()).toEqual({ error: 'not_found' });
+    expect(res.body).toEqual({ error: 'not_found' });
   });
 });
