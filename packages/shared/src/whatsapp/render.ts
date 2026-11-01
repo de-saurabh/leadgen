@@ -10,6 +10,8 @@ export interface RenderContext {
   name: string;
   businessName: string;
   answers: Answers;
+  /** Set once the customer has picked a slot or event. */
+  booking?: { date?: string; time?: string; resource?: string } | undefined;
 }
 
 const LIST_BUTTON_TEXT = 'Choose';
@@ -24,6 +26,7 @@ export function placeholderContext(ctx: RenderContext): PlaceholderContext {
     name: ctx.name,
     business: ctx.businessName,
     answers: displayAnswers(ctx.config.questions, ctx.answers),
+    ...(ctx.booking && { booking: ctx.booking }),
   };
 }
 

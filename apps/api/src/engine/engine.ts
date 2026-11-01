@@ -14,12 +14,23 @@ import {
   type Question,
 } from '@leadgen/shared';
 import type { LeadEventType, LeadStatus } from '../db/schema/leads.js';
+import type { BookingPort } from '../services/booking.js';
+import {
+  answerBooking,
+  askBooking,
+  bookingDisplay,
+  type BookingState,
+  type DialogueDeps,
+  type DialogueResult,
+} from './bookingDialogue.js';
 
 export interface EngineLead {
   name: string;
   status: LeadStatus;
   answers: Answers;
   currentQuestionId: string | null;
+  /** Where the customer is inside a booking question (see `BookingState`). */
+  flowState: Record<string, unknown>;
 }
 
 export interface EngineInput {
@@ -27,6 +38,8 @@ export interface EngineInput {
   config: CampaignConfig;
   businessName: string;
   message: InboundMessage;
+  /** Needed only when the campaign has booking questions. */
+  booking?: BookingPort | undefined;
 }
 
 export interface EngineResult {
@@ -76,10 +89,25 @@ function answerFrom(question: Question, message: InboundMessage): Answers[string
  * Advances a conversation by one customer message. Pure: reads the state it is given and
  * says what should change and what to send, so the caller can apply it atomically.
  */
-export function advance({ lead, config, businessName, message }: EngineInput): EngineResult {
+const PENDING_TEXT =
+  'Thanks {{name}}, your request for {{booking.date}} at {{booking.time}} has been sent to {{business}}. We will confirm it here shortly.';
+const UNAVAILABLE_TEXT = 'Sorry, there is nothing available to book right now.';
+
+export async function advance({
+  lead,
+  config,
+  businessName,
+  message,
+  booking: port,
+}: EngineInput): Promise<EngineResult> {
   const { settings, questions } = config;
   const result: EngineResult = {
-    lead: { ...lead, answers: { ...lead.answers }, botPaused: false },
+    lead: {
+      ...lead,
+      answers: { ...lead.answers },
+      flowState: { ...lead.flowState },
+      botPaused: false,
+    },
     outbound: [],
     events: [],
   };
@@ -88,7 +116,10 @@ export function advance({ lead, config, businessName, message }: EngineInput): E
     name: lead.name,
     businessName,
     answers: result.lead.answers,
+    booking: flow().booking,
   });
+  /** The booking sub-state, edited in place and saved with the lead. */
+  const flow = () => result.lead.flowState as BookingState;
 
   function handOff(questionId?: string) {
     result.lead.status = 'needs_human';
@@ -98,19 +129,69 @@ export function advance({ lead, config, businessName, message }: EngineInput): E
     result.events.push({ type: 'handoff', ...(questionId && { questionId }) });
   }
 
-  function askNext(): void {
+  function partySize(): number {
+    const q = questions.find((x) => x.type === 'party_size');
+    const n = q ? Number(result.lead.answers[q.key]) : NaN;
+    return Number.isFinite(n) && n >= 1 ? n : 1;
+  }
+
+  const dialogue = (): DialogueDeps | undefined =>
+    port && {
+      port,
+      partySize: partySize(),
+      prompt: (text) => renderText(text, render()),
+      handoffLabel: settings.handoff.label,
+      nudge: renderText(settings.nudge, render()),
+    };
+
+  /** Applies what a booking question came back with, then moves on if it is answered. */
+  async function applyDialogue(q: Question, outcome: DialogueResult): Promise<void> {
+    switch (outcome.kind) {
+      case 'message':
+        result.lead.currentQuestionId = q.id;
+        result.outbound.push(outcome.message);
+        return;
+      case 'none':
+        result.outbound.push({ kind: 'text', body: UNAVAILABLE_TEXT });
+        handOff(q.id);
+        return;
+      case 'skip':
+        result.lead.answers[q.key] = outcome.answer;
+        await askNext();
+        return;
+      case 'booked':
+        result.lead.answers[q.key] = outcome.answer;
+        flow().booking = bookingDisplay(outcome.booked, port!.timeZone);
+        result.events.push(
+          { type: 'answered', questionId: q.id },
+          { type: 'booked', questionId: q.id },
+        );
+        await askNext();
+        return;
+    }
+  }
+
+  async function askNext(): Promise<void> {
     const next = nextWhatsAppQuestion(questions, result.lead.answers);
     if (!next) {
+      const pending = flow().booking?.status === 'pending';
       result.lead.status = 'completed';
       result.lead.currentQuestionId = null;
-      result.outbound.push({ kind: 'text', body: renderText(settings.confirmation, render()) });
+      result.outbound.push({
+        kind: 'text',
+        body: renderText(pending ? PENDING_TEXT : settings.confirmation, render()),
+      });
       result.events.push({ type: 'completed' });
       return;
     }
     if (BOOKING_TYPES.includes(next.type)) {
-      // Booking questions need the availability service (a later milestone); until then a
-      // person finishes the booking rather than the customer hitting a dead end.
-      handOff(next.id);
+      const deps = dialogue();
+      if (!deps) {
+        // No availability to offer (e.g. a bare engine): a person finishes the booking.
+        handOff(next.id);
+        return;
+      }
+      await applyDialogue(next, await askBooking(next, flow(), deps));
       return;
     }
     result.lead.currentQuestionId = next.id;
@@ -125,13 +206,23 @@ export function advance({ lead, config, businessName, message }: EngineInput): E
   if (lead.status === 'new') {
     result.lead.status = 'in_conversation';
     result.events.push({ type: 'first_reply' });
-    askNext();
+    await askNext();
     return result;
   }
 
   const current = questions.find((q) => q.id === lead.currentQuestionId);
   if (!current) {
-    askNext();
+    await askNext();
+    return result;
+  }
+
+  if (BOOKING_TYPES.includes(current.type)) {
+    const deps = dialogue();
+    if (!deps) {
+      handOff(current.id);
+      return result;
+    }
+    await applyDialogue(current, await answerBooking(current, flow(), message, deps));
     return result;
   }
 
@@ -143,6 +234,6 @@ export function advance({ lead, config, businessName, message }: EngineInput): E
 
   result.lead.answers[current.key] = answer;
   result.events.push({ type: 'answered', questionId: current.id });
-  askNext();
+  await askNext();
   return result;
 }

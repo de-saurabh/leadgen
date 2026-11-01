@@ -3,6 +3,7 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { AppDb } from '../auth/auth.js';
 import * as schema from '../db/schema/index.js';
 import { advance } from '../engine/engine.js';
+import { createBookingPort } from './booking.js';
 import type { Logger } from '../logger.js';
 import type { GraphClient, SendableMessage } from '../whatsapp/graph.js';
 import type { ParsedInbound, ParsedWebhook } from '../whatsapp/webhook.js';
@@ -136,22 +137,36 @@ export function createConversationService({
         .select({
           config: schema.campaignVersions.config,
           businessName: schema.organization.name,
+          timeZone: schema.businessSettings.timezone,
         })
         .from(schema.campaignVersions)
         .innerJoin(schema.organization, eq(schema.organization.id, lead.organizationId))
+        .innerJoin(
+          schema.businessSettings,
+          eq(schema.businessSettings.organizationId, lead.organizationId),
+        )
         .where(eq(schema.campaignVersions.id, lead.campaignVersionId));
       if (!row) throw new Error(`campaign version ${lead.campaignVersionId} is missing`);
 
-      const result = advance({
+      const result = await advance({
         lead: {
           name: lead.name,
           status: lead.status,
           answers: lead.answers,
           currentQuestionId: lead.currentQuestionId,
+          flowState: lead.flowState,
         },
         config: row.config,
         businessName: row.businessName,
         message: m.message,
+        booking: createBookingPort(tx, {
+          organizationId: lead.organizationId,
+          campaignId: lead.campaignId,
+          leadId: lead.id,
+          timeZone: row.timeZone,
+          countPartySize: row.config.settings.countPartySize,
+          requiresApproval: row.config.settings.requiresApproval,
+        }),
       });
 
       // Sent before committing: if WhatsApp refuses, the state change rolls back and the
@@ -164,6 +179,7 @@ export function createConversationService({
           status: result.lead.status,
           answers: result.lead.answers,
           currentQuestionId: result.lead.currentQuestionId,
+          flowState: result.lead.flowState,
           botPaused: result.lead.botPaused,
         })
         .where(eq(schema.leads.id, lead.id));
