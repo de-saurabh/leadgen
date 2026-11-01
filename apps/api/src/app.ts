@@ -6,6 +6,7 @@ import { loadAuthContext } from './auth/context.js';
 import type { Auth, AppDb } from './auth/auth.js';
 import type { Logger } from './logger.js';
 import { adminRouter } from './routes/admin.js';
+import { bookingsRouter } from './routes/bookings.js';
 import { businessRouter } from './routes/business.js';
 import { configRouter, type PublicConfig } from './routes/config.js';
 import { campaignsRouter } from './routes/campaigns.js';
@@ -83,6 +84,7 @@ export function createApp({
   api.use(businessRouter(db));
   api.use(campaignsRouter(db));
   api.use(resourcesRouter(db));
+  api.use(bookingsRouter(db, conversations));
   api.use(whatsappNumbersRouter(db, secretBox));
   api.use('/admin', adminRouter({ auth, db }));
   app.use('/api', api);

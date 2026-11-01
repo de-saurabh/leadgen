@@ -2,6 +2,8 @@ import { renderPlaceholders, displayAnswers } from '@leadgen/shared';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { AppDb } from '../auth/auth.js';
 import * as schema from '../db/schema/index.js';
+import { formatDay, formatTime } from '../bookings/time.js';
+import type { BookingStatus } from '../db/schema/booking.js';
 import { advance } from '../engine/engine.js';
 import { createBookingPort } from './booking.js';
 import type { Logger } from '../logger.js';
@@ -216,6 +218,67 @@ export function createConversationService({
           );
         }
       }
+    },
+
+    /**
+     * Tells the customer a booking was confirmed, declined or cancelled, in the chat they
+     * booked from. Returns false when there was nothing to send it through.
+     */
+    async notifyBooking(
+      bookingId: string,
+      status: Extract<BookingStatus, 'confirmed' | 'rejected' | 'cancelled'>,
+    ) {
+      const [row] = await db
+        .select({
+          booking: schema.bookings,
+          lead: schema.leads,
+          config: schema.campaignVersions.config,
+          businessName: schema.organization.name,
+          timeZone: schema.businessSettings.timezone,
+          number: schema.whatsappNumbers,
+          resourceName: schema.resources.name,
+          eventName: schema.events.name,
+        })
+        .from(schema.bookings)
+        .innerJoin(schema.leads, eq(schema.leads.id, schema.bookings.leadId))
+        .innerJoin(
+          schema.campaignVersions,
+          eq(schema.campaignVersions.id, schema.leads.campaignVersionId),
+        )
+        .innerJoin(schema.organization, eq(schema.organization.id, schema.bookings.organizationId))
+        .innerJoin(
+          schema.businessSettings,
+          eq(schema.businessSettings.organizationId, schema.bookings.organizationId),
+        )
+        .innerJoin(schema.campaigns, eq(schema.campaigns.id, schema.leads.campaignId))
+        .innerJoin(
+          schema.whatsappNumbers,
+          eq(schema.whatsappNumbers.id, schema.campaigns.whatsappNumberId),
+        )
+        .leftJoin(schema.resources, eq(schema.resources.id, schema.bookings.resourceId))
+        .leftJoin(schema.events, eq(schema.events.id, schema.bookings.eventId))
+        .where(eq(schema.bookings.id, bookingId));
+      if (!row) return false;
+
+      const text = {
+        confirmed: row.config.settings.confirmation,
+        rejected:
+          "Sorry {{name}}, {{business}} couldn't confirm your booking for {{booking.date}} at {{booking.time}}. Reply here if you'd like to pick another time.",
+        cancelled:
+          'Your booking at {{business}} for {{booking.date}} at {{booking.time}} has been cancelled.',
+      }[status];
+      const body = renderPlaceholders(text, {
+        name: row.lead.name,
+        business: row.businessName,
+        answers: displayAnswers(row.config.questions, row.lead.answers),
+        booking: {
+          date: formatDay(row.booking.startsAt, row.timeZone),
+          time: formatTime(row.booking.startsAt, row.timeZone),
+          resource: row.resourceName ?? row.eventName ?? '',
+        },
+      });
+      await deliver(db, row.number, row.lead, [{ kind: 'text', body }]);
+      return true;
     },
 
     /**
