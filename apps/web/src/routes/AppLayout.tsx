@@ -1,3 +1,4 @@
+import { roleCan } from '@leadgen/shared';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { NavLink, Navigate, Outlet, useNavigate } from 'react-router';
@@ -51,6 +52,14 @@ export function AppLayout() {
           )}
           <nav className="ml-4 flex gap-4 text-sm">
             {business && <NavItem to="/">Home</NavItem>}
+            {role && roleCan(role, { campaign: ['read'] }) && (
+              <NavItem to="/campaigns" end={false}>
+                Campaigns
+              </NavItem>
+            )}
+            {role && roleCan(role, { whatsappNumber: ['read'] }) && (
+              <NavItem to="/settings">Settings</NavItem>
+            )}
             {isPlatformAdmin && <NavItem to="/admin">Businesses</NavItem>}
           </nav>
           <div className="ml-auto flex items-center gap-3 text-sm">
@@ -61,18 +70,18 @@ export function AppLayout() {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl p-6">
+      <main className="mx-auto max-w-6xl p-6">
         <Outlet />
       </main>
     </div>
   );
 }
 
-function NavItem({ to, children }: { to: string; children: ReactNode }) {
+function NavItem({ to, end = true, children }: { to: string; end?: boolean; children: ReactNode }) {
   return (
     <NavLink
       to={to}
-      end
+      end={end}
       className={({ isActive }) =>
         isActive ? 'font-medium' : 'text-muted-foreground hover:text-foreground'
       }
