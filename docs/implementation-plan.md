@@ -285,7 +285,7 @@ Times are stored in UTC and displayed in the business's timezone.
 
 ## 7. Milestones
 
-**Status:** M0, M1 and M2 are done, and M3 is built (live Meta test pending). Notes on how M1 differs from the plan:
+**Status:** M0, M1 and M2 are done, and M3 is built (live Meta test pending), and M4 is built. Notes on how M1 differs from the plan:
 
 - **Owners are created with credentials, not invited.** There's no email sending in the POC, so the admin creates the owner account and gets a generated password to hand over (shown once). Invitations by link arrive with team management (M7).
 - **Tables arrive with the milestone that needs them.** M1 migrated the auth tables and `business_settings` only; WhatsApp numbers, campaigns, resources, leads and bookings are added in M3–M5.
@@ -306,6 +306,14 @@ M3 notes (built and tested against a fake Meta and in dry-run mode on the dev se
 - **Booking questions hand over to a person** until M5 builds availability.
 - **Optional WhatsApp questions can't be skipped yet.** The bot asks every WhatsApp question.
 - **Spam on the public form** is limited to a honeypot field. Rate limiting is still to do.
+
+M4 notes:
+
+- **Where things live.** The campaign list and builder are at `/campaigns`, and WhatsApp number connection is at `/settings`. The builder has a question editor, settings, a live form and WhatsApp preview built from the same code the bot uses, save draft, publish, and share (tagged link, QR PNG, embed snippet).
+- **Share links use `BETTER_AUTH_URL`.** Set it to the public (ngrok) address before sharing with anyone else. The dialog warns while it points at localhost.
+- **No reminder-template editor yet.** The booking card edits reminder times, but the reminder template can't be set from the UI until booking is built (M5/M6). The validator warns when one is missing.
+- **Checked in a browser:** sign in, connect a number, create from the clinic starting point, publish, and the share dialog with its QR code. Adding, reordering and deleting questions are covered by unit tests of the editing helpers, not yet clicked through.
+- **Owners connect their own number** in Settings, where the plan had the platform admin doing it. Both work, since the API only needs the settings permission.
 
 Each milestone ends in something demoable.
 
