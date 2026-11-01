@@ -285,7 +285,7 @@ Times are stored in UTC and displayed in the business's timezone.
 
 ## 7. Milestones
 
-**Status:** M0, M1 and M2 are done, and M3 is built (live Meta test pending), and M4 is built. Notes on how M1 differs from the plan:
+**Status:** M0, M1 and M2 are done, and M3 is built (live Meta test pending), M4 is built, and M5 is built (browser check pending). Notes on how M1 differs from the plan:
 
 - **Owners are created with credentials, not invited.** There's no email sending in the POC, so the admin creates the owner account and gets a generated password to hand over (shown once). Invitations by link arrive with team management (M7).
 - **Tables arrive with the milestone that needs them.** M1 migrated the auth tables and `business_settings` only; WhatsApp numbers, campaigns, resources, leads and bookings are added in M3–M5.
@@ -303,7 +303,7 @@ M3 notes (built and tested against a fake Meta and in dry-run mode on the dev se
 - **No pg-boss yet.** The webhook acknowledges first and processes afterwards in the same process, serialised per lead by an advisory lock. The opening template is sent the same way. pg-boss arrives with M6, where reminders need scheduled jobs. The known gap: a crash between the acknowledgement and processing loses that message.
 - **Channel interface.** The engine returns channel-neutral messages and `services/conversations.ts` delivers them through a `GraphClient`. The M9 simulator will plug in at that seam.
 - **Numbers and campaigns have an API but no UI** until M4. Subscribing the Meta app to the number's webhooks stays a manual step in Meta.
-- **Booking questions hand over to a person** until M5 builds availability.
+- **Booking questions hand over to a person** only when a campaign has nothing left to offer (see M5).
 - **Optional WhatsApp questions can't be skipped yet.** The bot asks every WhatsApp question.
 - **Spam on the public form** is limited to a honeypot field. Rate limiting is still to do.
 
@@ -314,6 +314,15 @@ M4 notes:
 - **No reminder-template editor yet.** The booking card edits reminder times, but the reminder template can't be set from the UI until booking is built (M5/M6). The validator warns when one is missing.
 - **Checked in a browser:** sign in, connect a number, create from the clinic starting point, publish, and the share dialog with its QR code. Adding, reordering and deleting questions are covered by unit tests of the editing helpers, not yet clicked through.
 - **Owners connect their own number** in Settings, where the plan had the platform admin doing it. Both work, since the API only needs the settings permission.
+
+M5 notes (tested over the fake WhatsApp for the clinic, restaurant and pub campaigns, approval mode, and a five-way race for one slot):
+
+- **Booking happens when the customer picks.** The slot or event is booked at the moment of the tap, under an advisory lock on the resource and start time, with the availability re-checked. A customer who then abandons the chat keeps the booking until M6's stale-lead job releases it. If the slot was just taken, the bot says so and offers the times again.
+- **Slot picking follows the agreed sequence**: resource (or "Any available"), then day (up to 10), then part of day only when a day has more than 10 free times, then times (9 plus "Show later times" when there are more than 10). Where a single resource or event exists, the choice is skipped.
+- **Capacity.** Pending and confirmed bookings hold capacity. With `countPartySize` on, the party size counts, so two parties can share a table until it's full. The horizon is 14 days with 60 minutes' notice (constants in `services/booking.ts`).
+- **Approval.** With `requiresApproval`, the booking is created pending and the customer gets a "request sent" message. Approve, decline, cancel, done and no-show are in `PATCH /api/bookings/:id`, which messages the customer for the first three. If WhatsApp refuses (for example the 24-hour window closed) the change is kept and the dashboard says the customer wasn't messaged.
+- **Dashboard.** `/bookable` manages people and places (weekly hours with split shifts, time off) and events. The campaign builder has a "What customers can book" card for booking campaigns, saved on its own (offerings aren't versioned). `/bookings` lists bookings with the approve/decline actions. Times are entered and shown in the business's time zone.
+- **Not done:** members only see their own bookings in the API (scoped by the linked resource), but there's no team UI to link staff to resources until M7. Rescheduling is M6.
 
 Each milestone ends in something demoable.
 
