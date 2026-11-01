@@ -19,6 +19,8 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': API_URL,
+      // Public lead forms are served by the API.
+      '/f': API_URL,
     },
   },
 });

@@ -4,6 +4,7 @@ import {
   type CampaignConfigInput,
   type ValidationIssue,
 } from '@leadgen/shared';
+import { isDeepStrictEqual } from 'node:util';
 import { and, desc, eq, max } from 'drizzle-orm';
 import type { AppDb } from '../auth/auth.js';
 import * as schema from '../db/schema/index.js';
@@ -89,6 +90,28 @@ export async function getCampaign(db: AppDb, organizationId: string, id: string)
     .where(and(eq(schema.campaigns.id, id), eq(schema.campaigns.organizationId, organizationId)))
     .limit(1);
   return campaign;
+}
+
+/** The live version of a campaign, and whether the draft still says the same thing. */
+export async function getPublishedSummary(
+  db: AppDb,
+  campaign: { draft: CampaignConfigInput; publishedVersionId: string | null },
+) {
+  if (!campaign.publishedVersionId) return null;
+  const [version] = await db
+    .select()
+    .from(schema.campaignVersions)
+    .where(eq(schema.campaignVersions.id, campaign.publishedVersionId))
+    .limit(1);
+  if (!version) return null;
+  const draft = validateCampaign(campaign.draft);
+  return {
+    version: version.version,
+    publishedAt: version.publishedAt,
+    // An invalid draft can't match anything that was published.
+    // Compared structurally: jsonb does not keep key order.
+    matchesDraft: draft.valid && isDeepStrictEqual(draft.config, version.config),
+  };
 }
 
 export function listCampaigns(db: AppDb, organizationId: string) {

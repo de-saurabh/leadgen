@@ -56,6 +56,7 @@ const app = createApp({
   conversations,
   metaVerifyToken: env.META_VERIFY_TOKEN,
   metaAppSecret: env.META_APP_SECRET,
+  publicConfig: { publicUrl: env.BETTER_AUTH_URL, templateMode: env.WHATSAPP_TEMPLATE_MODE },
   onLeadCreated: (leadId) => {
     conversations
       ?.sendOpeningTemplate(leadId)

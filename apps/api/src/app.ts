@@ -7,6 +7,7 @@ import type { Auth, AppDb } from './auth/auth.js';
 import type { Logger } from './logger.js';
 import { adminRouter } from './routes/admin.js';
 import { businessRouter } from './routes/business.js';
+import { configRouter, type PublicConfig } from './routes/config.js';
 import { campaignsRouter } from './routes/campaigns.js';
 import { healthRouter } from './routes/health.js';
 import { meRouter } from './routes/me.js';
@@ -29,6 +30,7 @@ export interface AppDeps {
   conversations?: ConversationService | undefined;
   metaVerifyToken?: string | undefined;
   metaAppSecret?: string | undefined;
+  publicConfig?: PublicConfig | undefined;
   webDistDir?: string | undefined;
 }
 
@@ -42,6 +44,7 @@ export function createApp({
   conversations,
   metaVerifyToken,
   metaAppSecret,
+  publicConfig = { publicUrl: 'http://localhost:3000', templateMode: 'test' },
   webDistDir,
 }: AppDeps) {
   const app = express();
@@ -75,6 +78,7 @@ export function createApp({
   api.use(healthRouter(pingDb));
   api.use(loadAuthContext(auth, db));
   api.use(meRouter(db));
+  api.use(configRouter(publicConfig));
   api.use(businessRouter(db));
   api.use(campaignsRouter(db));
   api.use(whatsappNumbersRouter(db, secretBox));

@@ -152,6 +152,27 @@ describe('campaigns', () => {
     expect(campaign).toMatchObject({ status: 'published', publishedVersionId: versions[1]!.id });
   });
 
+  it('reports whether the draft still matches what is live', async () => {
+    await publish(a.owner, campaignId);
+    const live = await a.owner.request(`/api/campaigns/${campaignId}`);
+    expect(live.body.published).toMatchObject({ matchesDraft: true });
+
+    const edited = JSON.parse(JSON.stringify(live.body.campaign.draft)) as CampaignConfigInput;
+    edited.settings.nudge = 'Tap one of the buttons';
+    await a.owner.request(`/api/campaigns/${campaignId}`, {
+      method: 'PATCH',
+      json: { draft: edited },
+    });
+    const after = await a.owner.request(`/api/campaigns/${campaignId}`);
+    expect(after.body.published).toMatchObject({ matchesDraft: false });
+
+    const fresh = await a.owner.request('/api/campaigns', {
+      json: { name: 'Never published', draft: leadExample },
+    });
+    const unpublished = await a.owner.request(`/api/campaigns/${fresh.body.campaign.id}`);
+    expect(unpublished.body.published).toBeNull();
+  });
+
   it('numbers versions correctly under concurrent publishes', async () => {
     const results = await Promise.all([1, 2, 3].map(() => publish(a.owner, campaignId)));
     expect(results.map((r) => r.status)).toEqual([200, 200, 200]);

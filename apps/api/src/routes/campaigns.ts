@@ -7,6 +7,7 @@ import {
   SLUG_PATTERN,
   createCampaign,
   getCampaign,
+  getPublishedSummary,
   listCampaigns,
   publishCampaign,
   updateCampaignDraft,
@@ -58,7 +59,7 @@ export function campaignsRouter(db: AppDb) {
       res.status(404).json({ error: 'not_found' });
       return;
     }
-    res.json({ campaign });
+    res.json({ campaign, published: await getPublishedSummary(db, campaign) });
   });
 
   router.post('/campaigns', requirePermission({ campaign: ['create'] }), async (req, res) => {
