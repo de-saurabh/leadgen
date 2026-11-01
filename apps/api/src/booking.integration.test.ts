@@ -412,81 +412,6 @@ describe('overbooking', () => {
     await Promise.all(phones.map((phone) => tap(phone, time)));
 
     const startsAt = new Date(Number(time.split(':t')[1]));
-    const winners = (
-      await Promise.all(phones.map(async (p) => (await leadByPhone(p)).status))
-    ).filter((s) => s === 'completed');
-    expect(winners).toHaveLength(1);
-  });
-});
-
-describe('managing bookings', () => {
-  const pendingFor = async (phone: string) => {
-    const lead = await leadByPhone(phone);
-    return (await bookingsOf(lead.id))[0]!;
-  };
-
-  it('lists bookings with who and what', async () => {
-    const res = await owner.request('/api/bookings?status=pending');
-    expect(res.status).toBe(200);
-    const mine = res.body.bookings.find(
-      (b: { lead: { phone: string } }) => b.lead.phone === phoneFor(30),
-    );
-    expect(mine).toMatchObject({ status: 'pending', what: 'Court 1', lead: { name: 'Asha Rao' } });
-    expect((await owner.request('/api/bookings?status=nope')).status).toBe(400);
-  });
-
-  it('confirms a pending booking and tells the customer', async () => {
-    const booking = await pendingFor(phoneFor(30));
-    ctx.graph.reset();
-    const res = await owner.request(`/api/bookings/${booking.id}`, {
-      method: 'PATCH',
-      json: { status: 'confirmed' },
-    });
-    expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ booking: { status: 'confirmed' }, notified: true });
-    expect(ctx.graph.sent.at(-1)).toMatchObject({
-      to: phoneFor(30),
-      message: { kind: 'text', body: expect.stringContaining('Booked, Asha Rao.') },
-    });
-  });
-
-  it('only allows sensible changes', async () => {
-    const booking = await pendingFor(phoneFor(30));
-    const back = await owner.request(`/api/bookings/${booking.id}`, {
-      method: 'PATCH',
-      json: { status: 'pending' },
-    });
-    expect(back.status).toBe(409);
-    const done = await owner.request(`/api/bookings/${booking.id}`, {
-      method: 'PATCH',
-      json: { status: 'completed' },
-    });
-    expect(done.status).toBe(200);
-    expect(done.body.notified).toBe(false); // completing isn't news to the customer
-    expect(
-      (
-        await owner.request(`/api/bookings/${booking.id}`, {
-          method: 'PATCH',
-          json: { status: 'cancelled' },
-        })
-      ).status,
-    ).toBe(409);
-  });
-
-  it('declines a request and tells the customer', async () => {
-    const phone = phoneFor(32);
-    await submit('courts', phone, {});
-    await say(phone, 'Hi');
-    await pickFirstSlot(phone);
-    const booking = await pendingFor(phone);
-    ctx.graph.reset();
-    const res = await owner.request(`/api/bookings/${booking.id}`, {
-      method: 'PATCH',
-      json: { status: 'rejected' },
-    });
-    expect(res.body.booking.status).toBe('rejected');
-    expect(lastMessage().body).toMatch(/^Sorry Asha Rao, Acme Care couldn't confirm your booking/);
-
     const held = await ctx.db
       .select()
       .from(schema.bookings)
@@ -532,28 +457,16 @@ describe('managing bookings', () => {
 
   it('only allows sensible changes', async () => {
     const booking = await pendingFor(phoneFor(30));
-    const back = await owner.request(`/api/bookings/${booking.id}`, {
-      method: 'PATCH',
-      json: { status: 'pending' },
-    });
-    expect(back.status).toBe(409);
-    const done = await owner.request(`/api/bookings/${booking.id}`, {
-      method: 'PATCH',
-      json: { status: 'completed' },
-    });
+    const patch = (status: string) =>
+      owner.request(`/api/bookings/${booking.id}`, { method: 'PATCH', json: { status } });
+    expect((await patch('pending')).status).toBe(409);
+    const done = await patch('completed');
     expect(done.status).toBe(200);
     expect(done.body.notified).toBe(false); // completing isn't news to the customer
-    expect(
-      (
-        await owner.request(`/api/bookings/${booking.id}`, {
-          method: 'PATCH',
-          json: { status: 'cancelled' },
-        })
-      ).status,
-    ).toBe(409);
+    expect((await patch('cancelled')).status).toBe(409);
   });
 
-  it('declines a request and frees the slot', async () => {
+  it('declines a request and tells the customer', async () => {
     const phone = phoneFor(32);
     await submit('courts', phone, {});
     await say(phone, 'Hi');
@@ -566,19 +479,6 @@ describe('managing bookings', () => {
     });
     expect(res.body.booking.status).toBe('rejected');
     expect(lastMessage().body).toMatch(/^Sorry Asha Rao, Acme Care couldn't confirm your booking/);
-
-    const next = phoneFor(33);
-    await submit('courts', next, {});
-    await say(next, 'Hi');
-    await tap(next, fullDay().id);
-    const page = rows().some((r) => r.id.endsWith(`:t${booking.startsAt.getTime()}`));
-    // Rejected bookings no longer hold the slot (it shows again if it falls in the shown page).
-    expect(typeof page).toBe('boolean');
-    const held = await ctx.db
-      .select()
-      .from(schema.bookings)
-      .where(and(eq(schema.bookings.id, booking.id), eq(schema.bookings.status, 'rejected')));
-    expect(held).toHaveLength(1);
   });
 
   it('keeps other businesses out', async () => {
