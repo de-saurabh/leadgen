@@ -7,3 +7,5 @@ export * from './campaign/questions.js';
 export * from './campaign/validate.js';
 export * from './placeholders.js';
 export * from './whatsapp/limits.js';
+export * from './whatsapp/messages.js';
+export * from './whatsapp/render.js';

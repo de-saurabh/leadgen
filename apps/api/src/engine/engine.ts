@@ -1,19 +1,19 @@
 import {
   BOOKING_TYPES,
+  HANDOFF_MARKER,
+  parseReplyId,
+  questionMessage,
+  renderText,
   nextWhatsAppQuestion,
   parseAnswer,
   type Answers,
   type CampaignConfig,
+  type InboundMessage,
+  type OutboundMessage,
+  type RenderContext,
   type Question,
 } from '@leadgen/shared';
 import type { LeadEventType, LeadStatus } from '../db/schema/leads.js';
-import {
-  HANDOFF_MARKER,
-  parseReplyId,
-  type InboundMessage,
-  type OutboundMessage,
-} from './messages.js';
-import { questionMessage, renderText, type RenderContext } from './render.js';
 
 export interface EngineLead {
   name: string;

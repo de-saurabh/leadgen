@@ -1,15 +1,8 @@
-import {
-  WHATSAPP_LIMITS,
-  displayAnswers,
-  handoffFits,
-  interactiveKindFor,
-  optionsOf,
-  renderPlaceholders,
-  type Answers,
-  type CampaignConfig,
-  type PlaceholderContext,
-  type Question,
-} from '@leadgen/shared';
+import type { Answers } from '../campaign/questions.js';
+import type { CampaignConfig } from '../campaign/config.js';
+import { handoffFits, optionsOf, type Question } from '../campaign/questions.js';
+import { displayAnswers, renderPlaceholders, type PlaceholderContext } from '../placeholders.js';
+import { WHATSAPP_LIMITS, interactiveKindFor } from './limits.js';
 import { HANDOFF_MARKER, replyId, type ChoiceOption, type OutboundMessage } from './messages.js';
 
 export interface RenderContext {

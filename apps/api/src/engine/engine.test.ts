@@ -1,7 +1,11 @@
-import { clinicExample, validateCampaign, type CampaignConfigInput } from '@leadgen/shared';
+import {
+  clinicExample,
+  validateCampaign,
+  type CampaignConfigInput,
+  type InboundMessage,
+} from '@leadgen/shared';
 import { describe, expect, it } from 'vitest';
 import { advance, type EngineLead } from './engine.js';
-import type { InboundMessage } from './messages.js';
 
 function configOf(input: CampaignConfigInput) {
   const result = validateCampaign(input);

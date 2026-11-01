@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import type { InboundMessage } from '../engine/messages.js';
+import type { InboundMessage } from '@leadgen/shared';
 
 export interface ParsedInbound {
   phoneNumberId: string;

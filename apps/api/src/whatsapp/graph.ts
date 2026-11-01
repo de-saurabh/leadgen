@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { OutboundMessage } from '../engine/messages.js';
+import type { OutboundMessage } from '@leadgen/shared';
 
 export interface TemplateMessage {
   kind: 'template';
