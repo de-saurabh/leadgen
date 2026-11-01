@@ -12,6 +12,7 @@ import { campaignsRouter } from './routes/campaigns.js';
 import { healthRouter } from './routes/health.js';
 import { meRouter } from './routes/me.js';
 import { publicFormRouter } from './routes/publicForm.js';
+import { resourcesRouter } from './routes/resources.js';
 import { webhookRouter } from './routes/webhook.js';
 import { whatsappNumbersRouter } from './routes/whatsappNumbers.js';
 import type { ConversationService } from './services/conversations.js';
@@ -81,6 +82,7 @@ export function createApp({
   api.use(configRouter(publicConfig));
   api.use(businessRouter(db));
   api.use(campaignsRouter(db));
+  api.use(resourcesRouter(db));
   api.use(whatsappNumbersRouter(db, secretBox));
   api.use('/admin', adminRouter({ auth, db }));
   app.use('/api', api);

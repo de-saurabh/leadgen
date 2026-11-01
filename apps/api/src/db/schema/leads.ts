@@ -43,6 +43,8 @@ export const leads = pgTable(
     utm: jsonb('utm').$type<Record<string, string>>().notNull().default({}),
     answers: jsonb('answers').$type<Answers>().notNull().default({}),
     currentQuestionId: text('current_question_id'),
+    /** Where the lead is inside a multi-step question (picking a day, a time, ...). */
+    flowState: jsonb('flow_state').$type<Record<string, unknown>>().notNull().default({}),
     status: text('status', { enum: LEAD_STATUSES }).notNull().default('new'),
     /** True while a person has taken over the chat. */
     botPaused: boolean('bot_paused').notNull().default(false),

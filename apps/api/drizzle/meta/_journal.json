@@ -15,6 +15,13 @@
       "when": 1793288920213,
       "tag": "0001_campaigns_leads_whatsapp",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793544425438,
+      "tag": "0002_booking",
+      "breakpoints": true
     }
   ]
 }
