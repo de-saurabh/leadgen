@@ -36,6 +36,7 @@ import {
   moveItem,
   newQuestion,
 } from '@/features/campaigns/draft';
+import { OfferingsCard } from '@/features/booking/OfferingsCard';
 import { Preview } from '@/features/campaigns/Preview';
 import { QuestionEditor } from '@/features/campaigns/QuestionEditor';
 import { SettingsEditor } from '@/features/campaigns/SettingsEditor';
@@ -276,6 +277,17 @@ function Builder({
               <CampaignIssues issues={issuesForCampaign(validation.issues)} />
             </CardContent>
           </Card>
+
+          {bookingGoal && (
+            <OfferingsCard
+              campaignId={campaign.id}
+              needsResources={draft.questions.some(
+                (q) => q.type === 'pick_slot' || q.type === 'pick_resource',
+              )}
+              needsEvents={draft.questions.some((q) => q.type === 'pick_event')}
+              canEdit={canEdit}
+            />
+          )}
 
           <SettingsEditor
             name={name}

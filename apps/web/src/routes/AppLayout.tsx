@@ -57,6 +57,12 @@ export function AppLayout() {
                 Campaigns
               </NavItem>
             )}
+            {role && roleCan(role, { booking: ['read'] }) && (
+              <NavItem to="/bookings">Bookings</NavItem>
+            )}
+            {role && roleCan(role, { resource: ['read'] }) && (
+              <NavItem to="/bookable">Bookable</NavItem>
+            )}
             {role && roleCan(role, { whatsappNumber: ['read'] }) && (
               <NavItem to="/settings">Settings</NavItem>
             )}
