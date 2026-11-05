@@ -285,7 +285,7 @@ Times are stored in UTC and displayed in the business's timezone.
 
 ## 7. Milestones
 
-**Status:** M0, M1 and M2 are done, and M3 is built (live Meta test pending), M4 is built, and M5 is built (browser check pending). Notes on how M1 differs from the plan:
+**Status:** M0, M1 and M2 are done, and M3 is built (live Meta test pending), M4 is built, M5 is built (browser check pending), and M6 is built. Notes on how M1 differs from the plan:
 
 - **Owners are created with credentials, not invited.** There's no email sending in the POC, so the admin creates the owner account and gets a generated password to hand over (shown once). Invitations by link arrive with team management (M7).
 - **Tables arrive with the milestone that needs them.** M1 migrated the auth tables and `business_settings` only; WhatsApp numbers, campaigns, resources, leads and bookings are added in M3–M5.
@@ -323,6 +323,15 @@ M5 notes (tested over the fake WhatsApp for the clinic, restaurant and pub campa
 - **Approval.** With `requiresApproval`, the booking is created pending and the customer gets a "request sent" message. Approve, decline, cancel, done and no-show are in `PATCH /api/bookings/:id`, which messages the customer for the first three. If WhatsApp refuses (for example the 24-hour window closed) the change is kept and the dashboard says the customer wasn't messaged.
 - **Dashboard.** `/bookable` manages people and places (weekly hours with split shifts, time off) and events. The campaign builder has a "What customers can book" card for booking campaigns, saved on its own (offerings aren't versioned). `/bookings` lists bookings with the approve/decline actions. Times are entered and shown in the business's time zone.
 - **Not done:** members only see their own bookings in the API (scoped by the linked resource), but there's no team UI to link staff to resources until M7. Rescheduling is M6.
+
+M6 notes (tested over the fake WhatsApp; the pg-boss glue is smoke-tested against the test database):
+
+- **pg-boss is in.** It starts with the API (own `pgboss` schema in the same database) and runs two things: one delayed job per booking, offset and start time for reminders, and a 15-minute sweep for abandoned leads. Jobs call plain service functions (`reminders.send`, `dropStaleLeads`), so those are what the tests exercise. This also closes the old gap only for reminders: inbound webhook processing is still in-process.
+- **Reminders** are queued after the booking is committed and confirmed (at the tap, or on approval). Each job re-checks the booking before sending, so a cancelled, moved or already-started booking sends nothing. Offsets already in the past are skipped.
+- **24-hour window.** Inside it, the reminder is a message with Reschedule and Cancel buttons. Outside it, test mode sends `hello_world` (with a logged warning) and live mode sends the campaign's reminder template, or skips with a warning if there is none. Approving or declining from the dashboard no longer attempts a free-form message once the window has closed; the dashboard says the customer wasn't messaged.
+- **Cancel and reschedule over WhatsApp.** The confirmation and reminders carry the buttons, and typed requests like "cancel" or "can I reschedule" work too. Cancelling asks for confirmation first. Rescheduling goes back to the booking question with the same person or place; the old booking is released only when the new time is secured, and the new one records what it replaced. A customer who walks away mid-reschedule keeps their old booking.
+- **Stale leads** (24 hours of silence, not completed) become dropped, and any booking they were holding is released.
+- **Not done:** the reminder template can't be edited in the UI; staff aren't told when a customer cancels or moves a booking (the M7 inbox will show it); inbound webhook messages are still processed in-process, so a crash between the acknowledgement and processing loses that message.
 
 Each milestone ends in something demoable.
 
