@@ -3,6 +3,8 @@ import { pino } from 'pino';
 import { createApp } from '../app.js';
 import { createAuth } from '../auth/auth.js';
 import { createDb } from '../db/client.js';
+import { createDelivery } from '../services/delivery.js';
+import { createReminderService, type ReminderJob } from '../services/reminders.js';
 import { createConversationService } from '../services/conversations.js';
 import { createSecretBox } from '../services/crypto.js';
 import { ensurePlatformAdmin } from '../services/platformAdmin.js';
@@ -93,12 +95,29 @@ export async function createTestContext(
 
   const graph = new FakeGraph();
   const box = createSecretBox(TEST_ENV.TOKEN_ENCRYPTION_KEY);
+  const logger = pino({ level: 'silent' });
+  /** What the app asked the scheduler to do later. */
+  const scheduled: Array<{ job: ReminderJob; at: Date }> = [];
+  let clock: Date | undefined;
+  const reminders = createReminderService({
+    db,
+    deliver: createDelivery({ box, graph }),
+    logger,
+    templateMode: 'test',
+    scheduler: {
+      async scheduleReminder(job, at) {
+        scheduled.push({ job, at });
+      },
+    },
+    now: () => clock ?? new Date(),
+  });
   const conversations = createConversationService({
     db,
     box,
     graph,
-    logger: pino({ level: 'silent' }),
+    logger,
     templateMode: 'test',
+    scheduleReminders: reminders.scheduleFor,
   });
   const background: Promise<unknown>[] = [];
 
@@ -127,6 +146,12 @@ export async function createTestContext(
     baseUrl,
     graph,
     conversations,
+    reminders,
+    scheduled,
+    /** Pretends it is this time for reminders; call with no argument to use the real clock. */
+    setNow(at?: Date) {
+      clock = at;
+    },
     /** Waits for work the app started after responding (e.g. the opening template). */
     async settle() {
       await Promise.all(background.splice(0));

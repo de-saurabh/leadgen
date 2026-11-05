@@ -15,6 +15,7 @@ import {
 } from '@leadgen/shared';
 import type { LeadEventType, LeadStatus } from '../db/schema/leads.js';
 import type { BookingPort } from '../services/booking.js';
+import { changeButtons } from './aftercare.js';
 import {
   answerBooking,
   askBooking,
@@ -177,10 +178,11 @@ export async function advance({
       const pending = flow().booking?.status === 'pending';
       result.lead.status = 'completed';
       result.lead.currentQuestionId = null;
-      result.outbound.push({
-        kind: 'text',
-        body: renderText(pending ? PENDING_TEXT : settings.confirmation, render()),
-      });
+      const body = renderText(pending ? PENDING_TEXT : settings.confirmation, render());
+      // A confirmed booking comes with the buttons to change it.
+      result.outbound.push(
+        flow().booking && !pending ? changeButtons(body) : { kind: 'text', body },
+      );
       result.events.push({ type: 'completed' });
       return;
     }

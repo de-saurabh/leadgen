@@ -6,7 +6,10 @@ import { runMigrations } from './db/migrate.js';
 import * as schema from './db/schema/index.js';
 import { loadEnv } from './env.js';
 import { createLogger } from './logger.js';
+import { startJobs } from './jobs/jobs.js';
 import { createConversationService } from './services/conversations.js';
+import { createDelivery } from './services/delivery.js';
+import { createReminderService, noopScheduler, type Scheduler } from './services/reminders.js';
 import { createSecretBox } from './services/crypto.js';
 import { createDryRunGraphClient, createGraphClient } from './whatsapp/graph.js';
 import { ensurePlatformAdmin } from './services/platformAdmin.js';
@@ -35,6 +38,18 @@ const secretBox = env.TOKEN_ENCRYPTION_KEY ? createSecretBox(env.TOKEN_ENCRYPTIO
 const graph = env.WHATSAPP_DRY_RUN
   ? createDryRunGraphClient((line) => logger.info(line))
   : createGraphClient({ version: env.GRAPH_API_VERSION });
+// Reminders need a scheduler and the scheduler needs the reminder service, so the
+// service gets a late-bound one that is swapped for pg-boss once that has started.
+let scheduler: Scheduler = noopScheduler;
+const reminders = secretBox
+  ? createReminderService({
+      db,
+      deliver: createDelivery({ box: secretBox, graph }),
+      logger,
+      templateMode: env.WHATSAPP_TEMPLATE_MODE,
+      scheduler: { scheduleReminder: (job, at) => scheduler.scheduleReminder(job, at) },
+    })
+  : undefined;
 const conversations = secretBox
   ? createConversationService({
       db,
@@ -42,10 +57,20 @@ const conversations = secretBox
       graph,
       logger,
       templateMode: env.WHATSAPP_TEMPLATE_MODE,
+      scheduleReminders: reminders?.scheduleFor,
     })
   : undefined;
 if (!conversations) logger.warn('TOKEN_ENCRYPTION_KEY is not set: WhatsApp is disabled');
 if (env.WHATSAPP_DRY_RUN) logger.warn('WHATSAPP_DRY_RUN is on: no messages are sent to Meta');
+
+const jobs = await startJobs({
+  connectionString: env.DATABASE_URL,
+  db,
+  reminders: reminders ?? { send: async () => 'skipped' },
+  logger,
+});
+scheduler = jobs.scheduler;
+logger.info('background jobs started');
 
 const app = createApp({
   logger,
@@ -72,7 +97,10 @@ const server = app.listen(env.PORT, () => {
 function shutdown(signal: string) {
   logger.info(`${signal} received, shutting down`);
   server.close(() => {
-    database.close().finally(() => process.exit(0));
+    jobs
+      .stop()
+      .catch((err) => logger.error({ err }, 'could not stop background jobs'))
+      .finally(() => database.close().finally(() => process.exit(0)));
   });
   setTimeout(() => process.exit(1), 10_000).unref();
 }
