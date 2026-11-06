@@ -1,6 +1,7 @@
 import { roleCan } from '@leadgen/shared';
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
+import { Kpi } from '@/components/Kpi';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
@@ -27,6 +28,9 @@ const SOURCE_LABELS: Record<string, string> = {
   qr: 'QR code',
   embed: 'Embedded form',
 };
+
+const pct = (n: number, whole: number) => (whole > 0 ? Math.round((n / whole) * 100) : 0);
+const stagger = (i: number) => ({ '--i': i }) as CSSProperties;
 
 export function AnalyticsPage() {
   const me = useMe();
@@ -55,8 +59,8 @@ export function AnalyticsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold tracking-tight">Analytics</h1>
+      <div className="rise flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-aurora text-2xl font-bold tracking-tight">Analytics</h1>
         <div className="flex gap-2">
           <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
             <SelectTrigger className="w-40" aria-label="Date range">
@@ -92,36 +96,55 @@ export function AnalyticsPage() {
         <p className="text-destructive text-sm">Could not load analytics.</p>
       ) : (
         <>
-          <Card>
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <Kpi label="Leads" value={totals.leads} index={0} hint="came in" />
+            <Kpi
+              label="Replied"
+              value={pct(totals.replied, totals.leads)}
+              suffix="%"
+              hint={`${totals.replied} on WhatsApp`}
+              index={1}
+            />
+            <Kpi
+              label="Finished"
+              value={pct(totals.completed, totals.leads)}
+              suffix="%"
+              hint={`${totals.completed} completed`}
+              index={2}
+            />
+            <Kpi label="Booked" value={totals.booked} hint="appointments" index={3} />
+          </div>
+
+          <Card className="rise" style={stagger(4)}>
             <CardHeader>
               <CardTitle>Funnel</CardTitle>
               <CardDescription>How far people get, out of everyone who came in.</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
-              <Bar label="Came in" value={totals.leads} whole={totals.leads} />
-              <Bar label="Replied on WhatsApp" value={totals.replied} whole={totals.leads} />
-              <Bar label="Finished" value={totals.completed} whole={totals.leads} />
-              <Bar label="Booked" value={totals.booked} whole={totals.leads} />
-              <Bar label="Asked for a person" value={totals.handedOff} whole={totals.leads} />
-              <Bar label="Went quiet" value={totals.dropped} whole={totals.leads} />
+              <Bar label="Came in" value={totals.leads} whole={totals.leads} i={0} />
+              <Bar label="Replied on WhatsApp" value={totals.replied} whole={totals.leads} i={1} />
+              <Bar label="Finished" value={totals.completed} whole={totals.leads} i={2} />
+              <Bar label="Booked" value={totals.booked} whole={totals.leads} i={3} />
+              <Bar label="Asked for a person" value={totals.handedOff} whole={totals.leads} i={4} />
+              <Bar label="Went quiet" value={totals.dropped} whole={totals.leads} i={5} />
             </CardContent>
           </Card>
 
           {data.data.dropOff && (
-            <Card>
+            <Card className="rise" style={stagger(5)}>
               <CardHeader>
                 <CardTitle>Where people stop</CardTitle>
                 <CardDescription>How many answered each WhatsApp question.</CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
-                {data.data.dropOff.map((q) => (
-                  <Bar key={q.id} label={q.prompt} value={q.answered} whole={totals.leads} />
+                {data.data.dropOff.map((q, i) => (
+                  <Bar key={q.id} label={q.prompt} value={q.answered} whole={totals.leads} i={i} />
                 ))}
               </CardContent>
             </Card>
           )}
 
-          <Card>
+          <Card className="rise" style={stagger(6)}>
             <CardHeader>
               <CardTitle>Leads per day</CardTitle>
             </CardHeader>
@@ -129,13 +152,13 @@ export function AnalyticsPage() {
               {data.data.perDay.length === 0 ? (
                 <p className="text-muted-foreground text-sm">No leads in this period.</p>
               ) : (
-                <div className="flex h-32 items-end gap-1" role="img" aria-label="Leads per day">
-                  {data.data.perDay.map((d) => (
+                <div className="flex h-36 items-end gap-1" role="img" aria-label="Leads per day">
+                  {data.data.perDay.map((d, i) => (
                     <div
                       key={d.day}
                       title={`${d.day}: ${d.leads}`}
-                      className="bg-primary min-w-1 flex-1 rounded-t"
-                      style={{ height: `${(d.leads / maxDay) * 100}%` }}
+                      className="grow-y min-w-1 flex-1 rounded-t-md bg-linear-to-t from-(--aurora-from) to-(--aurora-to)"
+                      style={{ '--i': i, height: `${(d.leads / maxDay) * 100}%` } as CSSProperties}
                     />
                   ))}
                 </div>
@@ -146,10 +169,12 @@ export function AnalyticsPage() {
           <div className="grid gap-6 md:grid-cols-2">
             <Breakdown
               title="By campaign"
+              index={7}
               rows={data.data.byCampaign.map((c) => ({ key: c.id, name: c.name, counts: c }))}
             />
             <Breakdown
               title="By source"
+              index={8}
               rows={data.data.bySource.map((s) => ({
                 key: s.source,
                 name: SOURCE_LABELS[s.source] ?? s.source,
@@ -163,7 +188,17 @@ export function AnalyticsPage() {
   );
 }
 
-function Bar({ label, value, whole }: { label: string; value: number; whole: number }) {
+function Bar({
+  label,
+  value,
+  whole,
+  i,
+}: {
+  label: string;
+  value: number;
+  whole: number;
+  i: number;
+}) {
   return (
     <div className="flex flex-col gap-1">
       <div className="flex justify-between text-sm">
@@ -172,10 +207,15 @@ function Bar({ label, value, whole }: { label: string; value: number; whole: num
           {value} · {percent(value, whole)}
         </span>
       </div>
-      <div className="bg-muted h-2 rounded">
+      <div className="bg-muted h-2.5 overflow-hidden rounded-full">
         <div
-          className="bg-primary h-2 rounded"
-          style={{ width: whole > 0 ? `${Math.min(100, (value / whole) * 100)}%` : '0%' }}
+          className="grow-x h-full rounded-full bg-linear-to-r from-(--aurora-from) to-(--aurora-to)"
+          style={
+            {
+              '--i': i,
+              width: whole > 0 ? `${Math.min(100, (value / whole) * 100)}%` : '0%',
+            } as CSSProperties
+          }
         />
       </div>
     </div>
@@ -185,12 +225,14 @@ function Bar({ label, value, whole }: { label: string; value: number; whole: num
 function Breakdown({
   title,
   rows,
+  index,
 }: {
   title: string;
   rows: Array<{ key: string; name: string; counts: FunnelCounts }>;
+  index: number;
 }) {
   return (
-    <Card>
+    <Card className="rise" style={stagger(index)}>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
       </CardHeader>
