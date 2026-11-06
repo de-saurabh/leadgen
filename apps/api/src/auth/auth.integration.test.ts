@@ -275,3 +275,37 @@ describe('platform admin impersonation (Better Auth admin plugin)', () => {
     });
   });
 });
+
+describe('viewing as someone is read-only and audited', () => {
+  it('allows reads, blocks writes, and records all of it', async () => {
+    await ctx.db.delete(schema.auditLog);
+    const owner = await ctx.db.query.user.findFirst({
+      where: eq(schema.user.email, CLINIC.owner.email),
+    });
+    const viewer = await ctx.adminClient();
+    await viewer.request('/api/auth/admin/impersonate-user', { json: { userId: owner!.id } });
+
+    expect((await viewer.request('/api/campaigns')).status).toBe(200);
+    const write = await viewer.request('/api/campaigns', {
+      json: { name: 'Nope', slug: 'nope', draft: { questions: [], settings: {} } },
+    });
+    expect(write.status).toBe(403);
+    expect(write.body.error).toBe('read_only_view');
+
+    await viewer.request('/api/auth/admin/stop-impersonating', { json: {} });
+
+    const audit = await viewer.request('/api/admin/audit');
+    expect(audit.status).toBe(200);
+    const actions = audit.body.entries.map((e: { action: string }) => e.action).sort();
+    expect(actions).toEqual(['impersonation_started', 'impersonation_stopped', 'write_blocked']);
+    const started = audit.body.entries.find(
+      (e: { action: string }) => e.action === 'impersonation_started',
+    );
+    expect(started).toMatchObject({ actorName: expect.any(String), targetName: CLINIC.owner.name });
+
+    // Only the platform admin can read the log.
+    const ownerClient = ctx.client();
+    await ownerClient.signIn(CLINIC.owner.email, clinic.ownerPassword);
+    expect((await ownerClient.request('/api/admin/audit')).status).toBe(403);
+  });
+});

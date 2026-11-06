@@ -1,4 +1,4 @@
-import { roleCan } from '@leadgen/shared';
+﻿import { roleCan } from '@leadgen/shared';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { NavLink, Navigate, Outlet, useNavigate } from 'react-router';
@@ -15,7 +15,7 @@ export function AppLayout() {
   const navigate = useNavigate();
   useLiveUpdates(!!me.data?.business);
 
-  if (me.isPending) return <p className="text-muted-foreground p-6 text-sm">Loading…</p>;
+  if (me.isPending) return <p className="text-muted-foreground p-6 text-sm">Loadingâ€¦</p>;
   if (!me.data) return <Navigate to="/login" replace />;
   const { user, business, role, isPlatformAdmin, impersonatedBy } = me.data;
 
@@ -36,7 +36,7 @@ export function AppLayout() {
       {impersonatedBy && (
         <div className="flex items-center justify-center gap-3 bg-amber-100 px-4 py-2 text-sm text-amber-950">
           <span>
-            Viewing as <strong>{user.name}</strong>
+            Viewing as <strong>{user.name}</strong> (read-only, logged)
           </span>
           <Button size="sm" variant="outline" onClick={stopImpersonating}>
             Exit
@@ -63,6 +63,9 @@ export function AppLayout() {
               <NavItem to="/leads" end={false}>
                 Leads
               </NavItem>
+            )}
+            {role && roleCan(role, { analytics: ['read'] }) && (
+              <NavItem to="/analytics">Analytics</NavItem>
             )}
             {role && roleCan(role, { booking: ['read'] }) && (
               <NavItem to="/bookings">Bookings</NavItem>

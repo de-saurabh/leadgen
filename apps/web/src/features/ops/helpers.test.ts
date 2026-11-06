@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { answerText, describeMessage, timeAgo, windowIsOpen } from './helpers';
+﻿import { describe, expect, it } from 'vitest';
+import { answerText, describeMessage, percent, timeAgo, windowIsOpen } from './helpers';
 
 describe('describeMessage', () => {
   it('shows text and the choices offered', () => {
@@ -47,5 +47,12 @@ describe('answerText', () => {
     expect(answerText(['a', 'b'])).toBe('a, b');
     expect(answerText(true)).toBe('Yes');
     expect(answerText(4)).toBe('4');
+  });
+});
+
+describe('percent', () => {
+  it('rounds and handles an empty whole', () => {
+    expect(percent(1, 3)).toBe('33%');
+    expect(percent(0, 0)).toBe('-');
   });
 });

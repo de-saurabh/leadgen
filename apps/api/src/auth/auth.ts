@@ -50,6 +50,40 @@ export function createAuth(
       }),
     ],
     hooks: {
+      // Everything an admin does when viewing as someone is recorded.
+      after: createAuthMiddleware(async (ctx) => {
+        const started = ctx.path === '/admin/impersonate-user';
+        const stopped = ctx.path === '/admin/stop-impersonating';
+        if (!started && !stopped) return;
+        try {
+          const session = ctx.context.session;
+          if (started) {
+            const targetUserId = (ctx.body as { userId?: string } | undefined)?.userId;
+            if (!session || !targetUserId) return;
+            const [membership] = await db
+              .select({ organizationId: schema.member.organizationId })
+              .from(schema.member)
+              .where(eq(schema.member.userId, targetUserId))
+              .limit(1);
+            await db.insert(schema.auditLog).values({
+              actorUserId: session.user.id,
+              targetUserId,
+              organizationId: membership?.organizationId ?? null,
+              action: 'impersonation_started',
+              detail: { expiresInSeconds: IMPERSONATION_SECONDS },
+            });
+          } else if (session?.session.impersonatedBy) {
+            await db.insert(schema.auditLog).values({
+              actorUserId: session.session.impersonatedBy,
+              targetUserId: session.user.id,
+              organizationId: session.session.activeOrganizationId ?? null,
+              action: 'impersonation_stopped',
+            });
+          }
+        } catch {
+          // Auditing must never stop someone from signing out of a view-as session.
+        }
+      }),
       before: createAuthMiddleware(async (ctx) => {
         if (ctx.request && HTTP_BLOCKED_PATHS.has(ctx.path)) {
           throw new APIError('FORBIDDEN', { message: 'This action is not available.' });

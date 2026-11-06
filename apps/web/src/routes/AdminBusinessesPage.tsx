@@ -55,44 +55,103 @@ export function AdminBusinessesPage() {
   if (me.data && !me.data.isPlatformAdmin) return <Navigate to="/" replace />;
 
   return (
+    <div className="flex flex-col gap-6">
+      <Card>
+        <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <div className="flex flex-col gap-1.5">
+            <CardTitle>Businesses</CardTitle>
+            <CardDescription>Every business on the platform.</CardDescription>
+          </div>
+          <NewBusinessDialog />
+        </CardHeader>
+        <CardContent>
+          {businesses.isPending ? (
+            <p className="text-muted-foreground text-sm">Loading…</p>
+          ) : businesses.isError ? (
+            <p className="text-destructive text-sm">Could not load businesses.</p>
+          ) : businesses.data.businesses.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              No businesses yet. Create the first one.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Slug</TableHead>
+                  <TableHead>Timezone</TableHead>
+                  <TableHead className="text-right">People</TableHead>
+                  <TableHead>Created</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {businesses.data.businesses.map((business) => (
+                  <TableRow key={business.id}>
+                    <TableCell className="font-medium">{business.name}</TableCell>
+                    <TableCell className="text-muted-foreground">{business.slug}</TableCell>
+                    <TableCell>{business.timezone ?? '—'}</TableCell>
+                    <TableCell className="text-right">{business.memberCount}</TableCell>
+                    <TableCell>{new Date(business.createdAt).toLocaleDateString()}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+      <AuditCard enabled={me.data?.isPlatformAdmin === true} />
+    </div>
+  );
+}
+
+interface AuditEntry {
+  id: string;
+  action: 'impersonation_started' | 'impersonation_stopped' | 'write_blocked';
+  actorName: string | null;
+  targetName: string | null;
+  businessName: string | null;
+  at: string;
+}
+
+const AUDIT_LABELS: Record<AuditEntry['action'], string> = {
+  impersonation_started: 'started viewing as',
+  impersonation_stopped: 'stopped viewing as',
+  write_blocked: 'tried to change something while viewing as',
+};
+
+function AuditCard({ enabled }: { enabled: boolean }) {
+  const audit = useQuery({
+    queryKey: ['admin', 'audit'],
+    queryFn: () => api<{ entries: AuditEntry[] }>('/api/admin/audit'),
+    enabled,
+  });
+  return (
     <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-4">
-        <div className="flex flex-col gap-1.5">
-          <CardTitle>Businesses</CardTitle>
-          <CardDescription>Every business on the platform.</CardDescription>
-        </div>
-        <NewBusinessDialog />
+      <CardHeader>
+        <CardTitle>Audit log</CardTitle>
+        <CardDescription>Every time an admin views a business as someone.</CardDescription>
       </CardHeader>
       <CardContent>
-        {businesses.isPending ? (
+        {audit.isPending ? (
           <p className="text-muted-foreground text-sm">Loading…</p>
-        ) : businesses.isError ? (
-          <p className="text-destructive text-sm">Could not load businesses.</p>
-        ) : businesses.data.businesses.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No businesses yet. Create the first one.</p>
+        ) : audit.isError ? (
+          <p className="text-destructive text-sm">Could not load the log.</p>
+        ) : audit.data.entries.length === 0 ? (
+          <p className="text-muted-foreground text-sm">Nothing yet.</p>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Slug</TableHead>
-                <TableHead>Timezone</TableHead>
-                <TableHead className="text-right">People</TableHead>
-                <TableHead>Created</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {businesses.data.businesses.map((business) => (
-                <TableRow key={business.id}>
-                  <TableCell className="font-medium">{business.name}</TableCell>
-                  <TableCell className="text-muted-foreground">{business.slug}</TableCell>
-                  <TableCell>{business.timezone ?? '—'}</TableCell>
-                  <TableCell className="text-right">{business.memberCount}</TableCell>
-                  <TableCell>{new Date(business.createdAt).toLocaleDateString()}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <ul className="divide-y text-sm">
+            {audit.data.entries.map((e) => (
+              <li key={e.id} className="flex justify-between gap-4 py-2">
+                <span>
+                  {e.actorName ?? 'Someone'} {AUDIT_LABELS[e.action]} {e.targetName ?? 'a user'}
+                  {e.businessName && ` (${e.businessName})`}
+                </span>
+                <span className="text-muted-foreground shrink-0">
+                  {new Date(e.at).toLocaleString()}
+                </span>
+              </li>
+            ))}
+          </ul>
         )}
       </CardContent>
     </Card>

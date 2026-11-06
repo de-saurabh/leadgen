@@ -55,3 +55,8 @@ export function answerText(value: unknown): string {
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   return String(value ?? '');
 }
+
+/** "42%" of a whole; a dash when there is nothing to divide by. */
+export function percent(part: number, whole: number): string {
+  return whole > 0 ? `${Math.round((part / whole) * 100)}%` : '-';
+}

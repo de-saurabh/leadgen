@@ -130,3 +130,32 @@ export function useRemoveMember() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['team'] }),
   });
 }
+
+export interface FunnelCounts {
+  leads: number;
+  replied: number;
+  completed: number;
+  booked: number;
+  handedOff: number;
+  dropped: number;
+}
+
+export interface Analytics {
+  timeZone: string;
+  totals: FunnelCounts;
+  byCampaign: Array<FunnelCounts & { id: string; name: string }>;
+  bySource: Array<FunnelCounts & { source: string }>;
+  perDay: Array<{ day: string; leads: number }>;
+  dropOff?: Array<{ id: string; prompt: string; answered: number }>;
+}
+
+export const analyticsQuery = (filters: { days: number; campaignId?: string }) =>
+  queryOptions({
+    queryKey: ['analytics', filters.days, filters.campaignId ?? 'all'],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      params.set('from', new Date(Date.now() - filters.days * 86_400_000).toISOString());
+      if (filters.campaignId) params.set('campaignId', filters.campaignId);
+      return api<Analytics>(`/api/analytics?${params.toString()}`);
+    },
+  });

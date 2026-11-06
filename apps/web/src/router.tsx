@@ -1,4 +1,5 @@
-import { createBrowserRouter } from 'react-router';
+﻿import { createBrowserRouter } from 'react-router';
+import { AnalyticsPage } from './routes/AnalyticsPage';
 import { BookingsPage } from './routes/BookingsPage';
 import { AdminBusinessesPage } from './routes/AdminBusinessesPage';
 import { CampaignBuilderPage } from './routes/CampaignBuilderPage';
@@ -22,6 +23,7 @@ export const router = createBrowserRouter([
       { path: 'campaigns/:id', element: <CampaignBuilderPage /> },
       { path: 'leads', element: <LeadsPage /> },
       { path: 'leads/:id', element: <LeadPage /> },
+      { path: 'analytics', element: <AnalyticsPage /> },
       { path: 'team', element: <TeamPage /> },
       { path: 'bookings', element: <BookingsPage /> },
       { path: 'bookable', element: <ResourcesPage /> },

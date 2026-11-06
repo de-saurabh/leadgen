@@ -6,10 +6,12 @@ import { loadAuthContext } from './auth/context.js';
 import type { Auth, AppDb } from './auth/auth.js';
 import type { Logger } from './logger.js';
 import { adminRouter } from './routes/admin.js';
+import { analyticsRouter } from './routes/analytics.js';
 import { bookingsRouter } from './routes/bookings.js';
 import { leadsRouter } from './routes/leads.js';
 import { streamRouter } from './routes/stream.js';
 import { teamRouter } from './routes/team.js';
+import * as schema from './db/schema/index.js';
 import { createEventBus, type EventBus } from './services/events.js';
 import { businessRouter } from './routes/business.js';
 import { configRouter, type PublicConfig } from './routes/config.js';
@@ -86,6 +88,25 @@ export function createApp({
   const api = express.Router();
   api.use(healthRouter(pingDb));
   api.use(loadAuthContext(auth, db));
+  // An admin viewing as someone can look but not change anything.
+  api.use(async (req, res, next) => {
+    const ctx = req.ctx;
+    if (!ctx?.impersonatedBy || ['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+    await db
+      .insert(schema.auditLog)
+      .values({
+        actorUserId: ctx.impersonatedBy,
+        targetUserId: ctx.user.id,
+        organizationId: ctx.organizationId,
+        action: 'write_blocked',
+        detail: { method: req.method, path: req.originalUrl.split('?')[0] ?? '' },
+      })
+      .catch(() => undefined);
+    res.status(403).json({
+      error: 'read_only_view',
+      message: 'You are viewing as this person, which is read-only. Exit to make changes.',
+    });
+  });
   api.use(meRouter(db));
   api.use(configRouter(publicConfig));
   api.use(businessRouter(db));
@@ -93,6 +114,7 @@ export function createApp({
   api.use(resourcesRouter(db));
   api.use(bookingsRouter(db, conversations, bus));
   api.use(leadsRouter(db, conversations));
+  api.use(analyticsRouter(db));
   api.use(teamRouter({ auth, db }));
   api.use(streamRouter(bus));
   api.use(whatsappNumbersRouter(db, secretBox));

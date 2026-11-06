@@ -285,7 +285,7 @@ Times are stored in UTC and displayed in the business's timezone.
 
 ## 7. Milestones
 
-**Status:** M0, M1 and M2 are done, and M3 is built (live Meta test pending), M4 is built, M5 is built (browser check pending), and M6 is built. Notes on how M1 differs from the plan:
+**Status:** M0, M1 and M2 are done, and M3 is built (live Meta test pending), M4 is built, M5 is built (browser check pending), M6, M7 and M8 are built. Notes on how M1 differs from the plan:
 
 - **Owners are created with credentials, not invited.** There's no email sending in the POC, so the admin creates the owner account and gets a generated password to hand over (shown once). Invitations by link arrive with team management (M7).
 - **Tables arrive with the milestone that needs them.** M1 migrated the auth tables and `business_settings` only; WhatsApp numbers, campaigns, resources, leads and bookings are added in M3–M5.
@@ -332,6 +332,18 @@ M6 notes (tested over the fake WhatsApp; the pg-boss glue is smoke-tested agains
 - **Cancel and reschedule over WhatsApp.** The confirmation and reminders carry the buttons, and typed requests like "cancel" or "can I reschedule" work too. Cancelling asks for confirmation first. Rescheduling goes back to the booking question with the same person or place; the old booking is released only when the new time is secured, and the new one records what it replaced. A customer who walks away mid-reschedule keeps their old booking.
 - **Stale leads** (24 hours of silence, not completed) become dropped, and any booking they were holding is released.
 - **Not done:** the reminder template can't be edited in the UI; staff aren't told when a customer cancels or moves a booking (the M7 inbox will show it); inbound webhook messages are still processed in-process, so a crash between the acknowledgement and processing loses that message.
+
+M7 notes:
+
+- **Leads and inbox.** `GET /api/leads` lists leads (needs-a-person first, filter by status, campaign or search). The lead page shows the answers, the full chat and the bookings. Staff can reply (free-form only inside the 24h window), hand the lead back to the bot, or close it. Replying pauses the bot.
+- **Team.** Owners add people (a generated password is shown once), change roles and remove people; there is always at least one owner. Members are linked to what they look after on the Bookable page, and then see only those bookings.
+- **Live updates.** An in-process event bus feeds a server-sent-events stream that makes the dashboard refetch. It is per process, so a multi-instance deploy would need a shared bus.
+
+M8 notes:
+
+- **Analytics.** `GET /api/analytics` gives the funnel (came in, replied, finished, booked, asked for a person, went quiet), per campaign, per source, per day, and for a single campaign how many answered each WhatsApp question. Each lead counts once. "Replied" means any inbound message, so someone who asks for a person first still counts. The page uses plain CSS bars.
+- **Viewing as someone is read-only.** While an admin impersonates, every write request is refused with `read_only_view`. The session expires after 30 minutes, and the banner says so.
+- **Audit log.** Impersonation start and stop, and every blocked write, are recorded in `audit_log` and listed (admin only) at the bottom of the Businesses page.
 
 Each milestone ends in something demoable.
 

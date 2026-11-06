@@ -9,7 +9,7 @@ export function useLiveUpdates(enabled: boolean) {
     // EventSource reconnects by itself after a drop.
     const source = new EventSource('/api/stream');
     source.onmessage = (event) => {
-      let type = '';
+      let type: string;
       try {
         type = (JSON.parse(event.data as string) as { type?: string }).type ?? '';
       } catch {

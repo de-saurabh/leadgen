@@ -21,6 +21,7 @@ const TABLES = [
   'member',
   'invitation',
   'business_settings',
+  'audit_log',
 ];
 
 /** Stands in for Meta: records what would be sent, and can be told to fail. */

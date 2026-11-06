@@ -1,4 +1,7 @@
 import { fromNodeHeaders } from 'better-auth/node';
+import { desc, eq } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
+import * as schema from '../db/schema/index.js';
 import { Router } from 'express';
 import { z } from 'zod';
 import type { Auth, AppDb } from '../auth/auth.js';
@@ -36,6 +39,27 @@ const CreateBusinessBody = z.object({
 export function adminRouter(deps: { auth: Auth; db: AppDb }) {
   const router = Router();
   router.use(requirePlatformAdmin);
+
+  router.get('/audit', async (_req, res) => {
+    const actor = alias(schema.user, 'actor');
+    const rows = await deps.db
+      .select({
+        id: schema.auditLog.id,
+        action: schema.auditLog.action,
+        detail: schema.auditLog.detail,
+        at: schema.auditLog.at,
+        actorName: actor.name,
+        targetName: schema.user.name,
+        businessName: schema.organization.name,
+      })
+      .from(schema.auditLog)
+      .leftJoin(actor, eq(actor.id, schema.auditLog.actorUserId))
+      .leftJoin(schema.user, eq(schema.user.id, schema.auditLog.targetUserId))
+      .leftJoin(schema.organization, eq(schema.organization.id, schema.auditLog.organizationId))
+      .orderBy(desc(schema.auditLog.at))
+      .limit(100);
+    res.json({ entries: rows });
+  });
 
   router.get('/businesses', async (_req, res) => {
     res.json({ businesses: await listBusinesses(deps.db) });
