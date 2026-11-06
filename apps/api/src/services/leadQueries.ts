@@ -1,3 +1,4 @@
+import { displayAnswers, renderPlaceholders } from '@leadgen/shared';
 import { and, asc, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import type { AppDb } from '../auth/auth.js';
 import * as schema from '../db/schema/index.js';
@@ -58,10 +59,12 @@ export async function getLead(db: AppDb, organizationId: string, id: string) {
     .select({
       lead: schema.leads,
       campaignName: schema.campaigns.name,
+      businessName: schema.organization.name,
       config: schema.campaignVersions.config,
     })
     .from(schema.leads)
     .innerJoin(schema.campaigns, eq(schema.campaigns.id, schema.leads.campaignId))
+    .innerJoin(schema.organization, eq(schema.organization.id, schema.leads.organizationId))
     .innerJoin(
       schema.campaignVersions,
       eq(schema.campaignVersions.id, schema.leads.campaignVersionId),
@@ -99,10 +102,20 @@ export async function getLead(db: AppDb, organizationId: string, id: string) {
       .orderBy(asc(schema.bookings.startsAt)),
   ]);
 
+  const labelContext = {
+    name: row.lead.name,
+    business: row.businessName,
+    answers: displayAnswers(row.config.questions, row.lead.answers),
+  };
   // Answers as the owner's question labels, in the order they were asked.
   const answers = row.config.questions
     .filter((q) => row.lead.answers[q.key] !== undefined)
-    .map((q) => ({ key: q.key, question: q.prompt, type: q.type, value: row.lead.answers[q.key] }));
+    .map((q) => ({
+      key: q.key,
+      question: renderPlaceholders(q.prompt, labelContext),
+      type: q.type,
+      value: row.lead.answers[q.key],
+    }));
 
   return {
     lead: {

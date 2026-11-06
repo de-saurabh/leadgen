@@ -99,6 +99,50 @@ describe('simulator', () => {
     expect(new Set(rows.map((r) => r.channel))).toEqual(new Set(['simulator']));
   });
 
+  it('fills in the form answers a real customer would have given', async () => {
+    const form = await owner.request('/api/campaigns', {
+      json: {
+        name: 'Formy',
+        slug: 'formy',
+        whatsappNumberId: (await owner.request('/api/whatsapp-numbers')).body.numbers[0].id,
+        draft: {
+          questions: [
+            {
+              id: 'topic',
+              key: 'topic',
+              type: 'single_choice',
+              channel: 'form',
+              prompt: 'Topic?',
+              options: [
+                { id: 'a', label: 'Alpha' },
+                { id: 'b', label: 'Beta' },
+              ],
+            },
+            {
+              id: 'note',
+              key: 'note',
+              type: 'short_text',
+              channel: 'whatsapp',
+              prompt: 'About {{answers.topic}}?',
+            },
+          ],
+          settings: { goal: 'lead', confirmation: 'Thanks.' },
+        },
+      },
+    });
+    await owner.request(`/api/campaigns/${form.body.campaign.id}/publish`, {
+      method: 'POST',
+      json: {},
+    });
+    const start = await owner.request('/api/simulator/start', {
+      json: { campaignId: form.body.campaign.id },
+    });
+    const leadId: string = start.body.leadId;
+    await owner.request(`/api/simulator/${leadId}/reply`, { json: { text: 'Hi' } });
+    const chat = await owner.request(`/api/leads/${leadId}`);
+    expect(chat.body.messages.at(-1).body.body).toBe('About Alpha?');
+  });
+
   it('only plays made-up customers, and only in your own business', async () => {
     const start = await owner.request('/api/simulator/start', { json: { campaignId } });
     const leadId: string = start.body.leadId;

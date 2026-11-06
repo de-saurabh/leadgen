@@ -22,6 +22,12 @@ const RANGES = [
 
 const ALL = 'all';
 
+const SOURCE_LABELS: Record<string, string> = {
+  link: 'Link',
+  qr: 'QR code',
+  embed: 'Embedded form',
+};
+
 export function AnalyticsPage() {
   const me = useMe();
   const allowed = me.data?.role ? roleCan(me.data.role, { analytics: ['read'] }) : false;
@@ -144,7 +150,11 @@ export function AnalyticsPage() {
             />
             <Breakdown
               title="By source"
-              rows={data.data.bySource.map((s) => ({ key: s.source, name: s.source, counts: s }))}
+              rows={data.data.bySource.map((s) => ({
+                key: s.source,
+                name: SOURCE_LABELS[s.source] ?? s.source,
+                counts: s,
+              }))}
             />
           </div>
         </>
@@ -200,7 +210,7 @@ function Breakdown({
             <tbody>
               {rows.map((r) => (
                 <tr key={r.key} className="border-t">
-                  <td className="py-1.5 capitalize">{r.name}</td>
+                  <td className="py-1.5">{r.name}</td>
                   <td>{r.counts.leads}</td>
                   <td>{percent(r.counts.completed, r.counts.leads)}</td>
                   <td>{percent(r.counts.booked, r.counts.leads)}</td>

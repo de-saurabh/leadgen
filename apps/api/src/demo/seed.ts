@@ -3,6 +3,8 @@ import {
   pubExample,
   restaurantExample,
   type CampaignConfig,
+  displayAnswers,
+  renderPlaceholders,
   type CampaignConfigInput,
 } from '@leadgen/shared';
 import { eq, inArray } from 'drizzle-orm';
@@ -296,6 +298,7 @@ export async function seedDemo(deps: DemoDeps): Promise<DemoLogin[]> {
       slotMinutes,
       eventIds,
       businessIndex: index,
+      businessName: spec.name,
     });
   }
   return logins;
@@ -321,6 +324,7 @@ interface HistoryInput {
   slotMinutes: Map<string, number>;
   eventIds: string[];
   businessIndex: number;
+  businessName: string;
 }
 
 const BUCKETS = ['link', 'link', 'link', 'qr', 'qr', 'embed'];
@@ -499,7 +503,14 @@ async function seedHistory(input: HistoryInput) {
         lines.push({
           out: true,
           type: 'text',
-          body: { kind: 'text', body: q.prompt.replace('{{business}}', '') },
+          body: {
+            kind: 'text',
+            body: renderPlaceholders(q.prompt, {
+              name: name.split(' ')[0]!,
+              business: input.businessName,
+              answers: displayAnswers(questions, answers as never),
+            }),
+          },
           min: 4 + k,
         });
         lines.push({

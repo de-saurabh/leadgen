@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import type { Answers, CampaignConfig } from '@leadgen/shared';
 import { and, eq } from 'drizzle-orm';
 import { Router } from 'express';
 import { z } from 'zod';
@@ -8,6 +9,21 @@ import * as schema from '../db/schema/index.js';
 import type { ConversationService } from '../services/conversations.js';
 import { createLead, loadPublishedCampaign } from '../services/leads.js';
 import { isSimulatorPhone, newSimulatorPhone } from '../whatsapp/simulator.js';
+
+/** What a customer would have typed into the web form, so the chat can refer to it. */
+function sampleFormAnswers(questions: CampaignConfig['questions']): Answers {
+  const answers: Answers = {};
+  for (const q of questions) {
+    if (q.channel !== 'form') continue;
+    const first = q.options?.[0]?.id;
+    if (q.type === 'single_choice' && first) answers[q.key] = first;
+    else if (q.type === 'multi_choice' && first) answers[q.key] = [first];
+    else if (q.type === 'yes_no') answers[q.key] = true;
+    else if (q.type === 'party_size') answers[q.key] = 2;
+    else if (q.type === 'short_text' || q.type === 'long_text') answers[q.key] = 'Test';
+  }
+  return answers;
+}
 
 const StartBody = z.object({
   campaignId: z.uuid(),
@@ -59,7 +75,7 @@ export function simulatorRouter(db: AppDb, conversations?: ConversationService) 
       campaign,
       name: body.data.name,
       phone: newSimulatorPhone(),
-      answers: {},
+      answers: sampleFormAnswers(campaign.config.questions),
       source: 'link',
       utm: {},
     });

@@ -44,15 +44,15 @@ export function AppLayout() {
         </div>
       )}
       <header className="border-b">
-        <div className="mx-auto flex max-w-5xl items-center gap-4 px-6 py-3">
+        <div className="mx-auto flex max-w-6xl items-center gap-4 px-6 py-3">
           <span className="font-semibold tracking-tight">LeadGen</span>
           {business && (
-            <span className="text-muted-foreground flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground flex items-center gap-2 text-sm whitespace-nowrap">
               {business.name}
               {role && <Badge variant="secondary">{business.roleLabel ?? role}</Badge>}
             </span>
           )}
-          <nav className="ml-4 flex gap-4 text-sm">
+          <nav className="ml-4 flex gap-4 text-sm whitespace-nowrap">
             {business && <NavItem to="/">Home</NavItem>}
             {role && roleCan(role, { campaign: ['read'] }) && (
               <NavItem to="/campaigns" end={false}>
