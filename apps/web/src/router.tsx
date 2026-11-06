@@ -11,6 +11,7 @@ import { LeadsPage } from './routes/LeadsPage';
 import { LoginPage } from './routes/LoginPage';
 import { ResourcesPage } from './routes/ResourcesPage';
 import { TeamPage } from './routes/TeamPage';
+import { SimulatorPage } from './routes/SimulatorPage';
 import { SettingsPage } from './routes/SettingsPage';
 
 export const router = createBrowserRouter([
@@ -24,6 +25,7 @@ export const router = createBrowserRouter([
       { path: 'leads', element: <LeadsPage /> },
       { path: 'leads/:id', element: <LeadPage /> },
       { path: 'analytics', element: <AnalyticsPage /> },
+      { path: 'simulator', element: <SimulatorPage /> },
       { path: 'team', element: <TeamPage /> },
       { path: 'bookings', element: <BookingsPage /> },
       { path: 'bookable', element: <ResourcesPage /> },

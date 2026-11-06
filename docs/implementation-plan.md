@@ -285,7 +285,7 @@ Times are stored in UTC and displayed in the business's timezone.
 
 ## 7. Milestones
 
-**Status:** M0, M1 and M2 are done, and M3 is built (live Meta test pending), M4 is built, M5 is built (browser check pending), M6, M7 and M8 are built. Notes on how M1 differs from the plan:
+**Status:** M0, M1 and M2 are done, and M3 is built (live Meta test pending), M4 is built, M5 is built (browser check pending), M6, M7, M8 and M9 are built. Notes on how M1 differs from the plan:
 
 - **Owners are created with credentials, not invited.** There's no email sending in the POC, so the admin creates the owner account and gets a generated password to hand over (shown once). Invitations by link arrive with team management (M7).
 - **Tables arrive with the milestone that needs them.** M1 migrated the auth tables and `business_settings` only; WhatsApp numbers, campaigns, resources, leads and bookings are added in M3–M5.
@@ -345,6 +345,13 @@ M8 notes:
 - **Viewing as someone is read-only.** While an admin impersonates, every write request is refused with `read_only_view`. The session expires after 30 minutes, and the banner says so.
 - **Audit log.** Impersonation start and stop, and every blocked write, are recorded in `audit_log` and listed (admin only) at the bottom of the Businesses page.
 
+M9 notes:
+
+- **Simulator.** "Try it" in the dashboard starts a test lead on a published campaign with a made-up number (prefix `0000`) and plays the customer through the real webhook path. A wrapper around the Graph client answers for those numbers with a fake receipt, so nothing reaches Meta. Messages are stored with `channel = simulator`.
+- **Demo seed.** `pnpm demo:seed` (see section 8 for the plan; the built version differs slightly) creates City Care Clinic (3 doctors linked to member logins, a manager), Spice Route Kitchen (5 tables, party size, auto-assign) and Neon Pub & Club (Friday/Saturday events). History is generated from a fixed seed, so it is the same every time. `pnpm demo:reset` removes only the demo businesses and their people. Demo accounts share `DEMO_PASSWORD`.
+- **Runbook and deploy notes** are in `docs/demo-runbook.md` and the README. The app stays host-neutral (Dockerfile + env vars); the cloud host is still undecided.
+- **Not done:** the cloud rehearsal (no host chosen), and the live Meta test with the real number.
+
 Each milestone ends in something demoable.
 
 | #   | Milestone                           | Contents                                                                                                                                                                                                        | Done when                                                                                                                                           |
@@ -371,7 +378,7 @@ Rough order of effort: M2 and M5 carry the most logic, and M4 and M7 the most UI
 | **Neon Pub & Club**        | Events: DJ Night, Bollywood Night, Diwali Night (capacity 150) | "Book an event" (pick event) + "Diwali Night" single-event campaign; approval for party > 8 via campaign setting | Events, both campaign modes, approval       |
 
 - History: ~4 weeks of leads across sources with realistic drop-off, bookings across statuses, a few needs-human threads, and messages.
-- Clearly marked as sample data (`seed=true`) so it can be reset.
+- Reset removes the demo businesses by their fixed slugs (`demo-*`) and the demo logins by email, so real data is untouched. As built: the clinic has a manager plus 3 doctor logins, the restaurant has 5 tables with 60-minute slots, and the pub has weekly Friday/Saturday events rather than the three named nights.
 
 ## 9. Environment variables
 

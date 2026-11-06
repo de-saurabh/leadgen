@@ -159,3 +159,19 @@ export const analyticsQuery = (filters: { days: number; campaignId?: string }) =
       return api<Analytics>(`/api/analytics?${params.toString()}`);
     },
   });
+
+export function useStartSimulator() {
+  return useMutation({
+    mutationFn: (input: { campaignId: string; name?: string }) =>
+      api<{ leadId: string }>('/api/simulator/start', { json: input }),
+  });
+}
+
+export function useSimulatorReply(leadId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { text: string } | { replyId: string; title: string }) =>
+      api(`/api/simulator/${leadId}/reply`, { json: input }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['lead', leadId] }),
+  });
+}

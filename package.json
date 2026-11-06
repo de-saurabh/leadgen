@@ -16,6 +16,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "demo:seed": "pnpm --filter @leadgen/api demo:seed",
+    "demo:reset": "pnpm --filter @leadgen/api demo:reset",
     "db:up": "docker compose up -d --wait db",
     "db:down": "docker compose down"
   },

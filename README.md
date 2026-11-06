@@ -49,6 +49,16 @@ Outgoing messages are logged by the API instead of sent. You can post sample cus
 
 In test mode (`WHATSAPP_TEMPLATE_MODE=test`, the default) the only template sent is Meta's `hello_world`.
 
+## Demo data and the simulator
+
+`pnpm demo:seed` builds three sample businesses (a clinic, a restaurant, a pub) with live campaigns and
+about three weeks of leads, chats and bookings. It is safe to repeat; `pnpm demo:reset` removes them.
+Logins and the demo script are in [docs/demo-runbook.md](docs/demo-runbook.md). Everyone signs in with
+`DEMO_PASSWORD` (set it in `.env`; there is a default in the seed for local use only).
+
+**Try it** in the dashboard plays a customer against a published campaign. It runs the real bot but sends
+nothing to WhatsApp (made-up numbers start with `0000`).
+
 ## Scripts
 
 | Command             | What it does                                        |
@@ -61,6 +71,8 @@ In test mode (`WHATSAPP_TEMPLATE_MODE=test`, the default) the only template sent
 | `pnpm format`       | Prettier (write)                                    |
 | `pnpm check`        | Format check + lint + typecheck + test (used in CI) |
 | `pnpm db:up / down` | Start / stop local Postgres                         |
+| `pnpm demo:seed`    | Rebuild the sample businesses and history           |
+| `pnpm demo:reset`   | Remove the sample businesses                        |
 
 ## Production image
 
@@ -70,3 +82,26 @@ A single Docker image builds everything and runs the API, which also serves the 
 docker build -t leadgen .
 docker run -p 3000:3000 -e DATABASE_URL=postgres://… leadgen
 ```
+
+## Deploying
+
+The image is host-neutral: any host that runs a container and gives it a Postgres database works.
+The API runs its own migrations and background jobs (pg-boss, in the same database) on start, so
+there is nothing else to run. Use one instance: live updates use an in-process event bus.
+
+| Variable                                | Notes                                                           |
+| --------------------------------------- | --------------------------------------------------------------- |
+| `DATABASE_URL`                          | Postgres 14+ connection string                                  |
+| `BETTER_AUTH_SECRET`                    | 32+ random characters                                           |
+| `BETTER_AUTH_URL`                       | The public https URL of the app (cookies, form links, QR codes) |
+| `WEB_ORIGIN`                            | Same as `BETTER_AUTH_URL` when the API serves the dashboard     |
+| `WEB_DIST_DIR`                          | Set by the Dockerfile                                           |
+| `PLATFORM_ADMIN_EMAIL` / `..._PASSWORD` | Created on first boot                                           |
+| `TOKEN_ENCRYPTION_KEY`                  | `openssl rand -base64 32`. Without it WhatsApp is disabled      |
+| `META_APP_SECRET`, `META_VERIFY_TOKEN`  | Webhook signature and verification                              |
+| `WHATSAPP_TEMPLATE_MODE`                | `test` (default) sends only `hello_world`                       |
+| `DEMO_PASSWORD`                         | Only for `pnpm demo:seed`                                       |
+
+Point Meta's webhook at `https://<your-host>/webhook`. Behind a proxy or tunnel such as ngrok, set
+`BETTER_AUTH_URL` to the public URL, not localhost, or sign-in cookies and share links break.
+To load the demo data on a deployed instance, run `pnpm demo:seed` in the container.
