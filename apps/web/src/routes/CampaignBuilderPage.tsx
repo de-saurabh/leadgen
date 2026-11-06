@@ -166,7 +166,9 @@ function Builder({
         <Link to="/campaigns" className="text-muted-foreground text-sm hover:underline">
           ← Campaigns
         </Link>
-        <h1 className="text-xl font-semibold">{name || 'Untitled campaign'}</h1>
+        <h1 className="text-aurora text-2xl font-bold tracking-tight">
+          {name || 'Untitled campaign'}
+        </h1>
         {!everLive ? (
           <Badge variant="secondary">Draft</Badge>
         ) : (

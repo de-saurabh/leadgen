@@ -56,7 +56,7 @@ export function BookingsPage() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Bookings</CardTitle>
+          <CardTitle className="text-aurora text-2xl font-bold">Bookings</CardTitle>
           <CardDescription>Your role doesn&apos;t include bookings.</CardDescription>
         </CardHeader>
       </Card>
@@ -67,7 +67,7 @@ export function BookingsPage() {
     <Card>
       <CardHeader className="flex flex-col gap-3">
         <div className="flex flex-col gap-1.5">
-          <CardTitle>Bookings</CardTitle>
+          <CardTitle className="text-aurora text-2xl font-bold">Bookings</CardTitle>
           <CardDescription>What customers booked through WhatsApp.</CardDescription>
         </div>
         <Tabs value={filter} onValueChange={(v) => setFilter(v as BookingStatus | 'all')}>

@@ -59,7 +59,7 @@ export function AdminBusinessesPage() {
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div className="flex flex-col gap-1.5">
-            <CardTitle>Businesses</CardTitle>
+            <CardTitle className="text-aurora text-2xl font-bold">Businesses</CardTitle>
             <CardDescription>Every business on the platform.</CardDescription>
           </div>
           <NewBusinessDialog />

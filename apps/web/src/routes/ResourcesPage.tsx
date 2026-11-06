@@ -31,7 +31,7 @@ export function ResourcesPage() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Bookable</CardTitle>
+          <CardTitle className="text-aurora text-2xl font-bold">Bookable</CardTitle>
           <CardDescription>
             Your role doesn&apos;t include managing what is bookable.
           </CardDescription>

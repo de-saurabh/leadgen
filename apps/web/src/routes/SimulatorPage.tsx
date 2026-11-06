@@ -49,7 +49,7 @@ export function SimulatorPage() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Try it</CardTitle>
+          <CardTitle className="text-aurora text-2xl font-bold">Try it</CardTitle>
           <CardDescription>Your role doesn&apos;t include the simulator.</CardDescription>
         </CardHeader>
       </Card>
@@ -67,7 +67,7 @@ export function SimulatorPage() {
     <div className="mx-auto flex max-w-xl flex-col gap-4">
       <Card>
         <CardHeader>
-          <CardTitle>Try it</CardTitle>
+          <CardTitle className="text-aurora text-2xl font-bold">Try it</CardTitle>
           <CardDescription>
             Play a customer against a published campaign. It runs the real bot, but nothing is sent
             to WhatsApp, and the test lead shows up under Leads.
@@ -137,15 +137,15 @@ function Chat({ leadId }: { leadId: string }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
-        <div className="bg-muted/40 flex h-96 flex-col gap-2 overflow-y-auto rounded-md p-3">
+        <div className="bg-muted/40 flex h-96 flex-col gap-2 overflow-y-auto rounded-2xl p-3">
           {messages.map((m) => (
             <div
               key={m.id}
-              className={
+              className={`pop max-w-[80%] px-3.5 py-2 text-sm whitespace-pre-wrap ${
                 m.direction === 'out'
-                  ? 'bg-card max-w-[80%] self-start rounded-lg border px-3 py-2 text-sm whitespace-pre-wrap'
-                  : 'bg-primary text-primary-foreground max-w-[80%] self-end rounded-lg px-3 py-2 text-sm whitespace-pre-wrap'
-              }
+                  ? 'glass self-start rounded-2xl rounded-bl-md'
+                  : 'bg-aurora self-end rounded-2xl rounded-br-md text-white'
+              }`}
             >
               {describeMessage(m.type, m.body)}
             </div>

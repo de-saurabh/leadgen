@@ -21,7 +21,7 @@ export function SettingsPage() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Settings</CardTitle>
+          <CardTitle className="text-aurora text-2xl font-bold">Settings</CardTitle>
           <CardDescription>Your role doesn&apos;t include business settings.</CardDescription>
         </CardHeader>
       </Card>

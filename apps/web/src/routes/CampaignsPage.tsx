@@ -52,7 +52,7 @@ export function CampaignsPage() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Campaigns</CardTitle>
+          <CardTitle className="text-aurora text-2xl font-bold">Campaigns</CardTitle>
           <CardDescription>Your role doesn&apos;t include managing campaigns.</CardDescription>
         </CardHeader>
       </Card>
@@ -65,7 +65,7 @@ export function CampaignsPage() {
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-4">
         <div className="flex flex-col gap-1.5">
-          <CardTitle>Campaigns</CardTitle>
+          <CardTitle className="text-aurora text-2xl font-bold">Campaigns</CardTitle>
           <CardDescription>
             Each campaign is a form plus a WhatsApp conversation. Run as many as you like.
           </CardDescription>

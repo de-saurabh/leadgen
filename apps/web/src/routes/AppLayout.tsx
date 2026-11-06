@@ -14,7 +14,7 @@ import {
   UsersRound,
   type LucideIcon,
 } from 'lucide-react';
-import { NavLink, Navigate, Outlet, useNavigate } from 'react-router';
+import { NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,7 @@ export function AppLayout() {
   const me = useMe();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   useLiveUpdates(!!me.data?.business);
 
   if (me.isPending) return <p className="text-muted-foreground p-6 text-sm">Loading…</p>;
@@ -135,7 +136,9 @@ export function AppLayout() {
           </div>
         )}
         <main className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
-          <Outlet />
+          <div key={pathname.split('/')[1] ?? ''} className="rise">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>
