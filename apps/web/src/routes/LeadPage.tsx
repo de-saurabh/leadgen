@@ -1,6 +1,6 @@
 import { roleCan } from '@leadgen/shared';
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ import {
   windowIsOpen,
 } from '@/features/ops/helpers';
 import { useMe } from '@/features/session/me';
+import { useFreshIds } from '@/lib/fresh';
 
 export function LeadPage() {
   const { id = '' } = useParams();
@@ -71,6 +72,10 @@ function Conversation({
   const close = useCloseLead(lead.id);
   const [text, setText] = useState('');
   const bottom = useRef<HTMLDivElement>(null);
+  const fresh = useFreshIds(
+    detail.messages.map((m) => m.id),
+    lead.id,
+  );
   const open = windowIsOpen(lead.lastInboundAt);
   const done = lead.status === 'completed' || lead.status === 'dropped';
   const error = reply.error ?? handBack.error ?? close.error;
@@ -88,11 +93,11 @@ function Conversation({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="rise flex flex-wrap items-center gap-3">
         <Link to="/leads" className="text-muted-foreground text-sm hover:underline">
           ← Leads
         </Link>
-        <h1 className="text-xl font-semibold">{lead.name}</h1>
+        <h1 className="text-aurora text-2xl font-bold tracking-tight">{lead.name}</h1>
         <Badge variant={lead.status === 'needs_human' ? 'destructive' : 'secondary'}>
           {STATUS_LABELS[lead.status]}
         </Badge>
@@ -113,20 +118,23 @@ function Conversation({
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <div
-              className="bg-muted/40 flex max-h-[28rem] min-h-48 flex-col gap-2 overflow-y-auto rounded-md p-3"
+              className="bg-muted/40 flex max-h-[28rem] min-h-48 flex-col gap-2 overflow-y-auto rounded-2xl p-3"
               aria-label="Messages"
             >
               {detail.messages.length === 0 && (
                 <p className="text-muted-foreground text-sm">No messages yet.</p>
               )}
-              {detail.messages.map((m) => (
+              {detail.messages.map((m, i) => (
                 <div
                   key={m.id}
-                  className={
+                  style={{ '--i': fresh.has(m.id) ? 0 : Math.min(i, 12) } as CSSProperties}
+                  className={`pop max-w-[80%] px-3.5 py-2 text-sm whitespace-pre-wrap ${
+                    fresh.has(m.id) ? 'flash ' : ''
+                  }${
                     m.direction === 'out'
-                      ? 'bg-primary text-primary-foreground ml-auto max-w-[80%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap'
-                      : 'bg-background max-w-[80%] rounded-lg border px-3 py-2 text-sm whitespace-pre-wrap'
-                  }
+                      ? 'bg-aurora ml-auto rounded-2xl rounded-br-md text-white'
+                      : 'glass rounded-2xl rounded-bl-md'
+                  }`}
                 >
                   {describeMessage(m.type, m.body)}
                   <div className="mt-1 text-[10px] opacity-70">

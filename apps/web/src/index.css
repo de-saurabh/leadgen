@@ -312,3 +312,23 @@
     transform: none;
   }
 }
+
+/* A table row that just arrived: a coloured wash that fades out. */
+@keyframes row-flash {
+  from {
+    background-color: var(--glow);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+@layer utilities {
+  .row-flash {
+    animation: row-flash 2.2s ease-out;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .row-flash {
+    animation: none;
+  }
+}

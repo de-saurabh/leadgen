@@ -1,6 +1,6 @@
 import { roleCan } from '@leadgen/shared';
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { Link } from 'react-router';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +17,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { leadsQuery, type LeadStatus } from '@/features/ops/api';
 import { STATUS_LABELS, timeAgo } from '@/features/ops/helpers';
 import { useMe } from '@/features/session/me';
+import { useFreshIds } from '@/lib/fresh';
 
 type Filter = 'all' | LeadStatus;
 
@@ -39,6 +40,8 @@ export function LeadsPage() {
   });
   const waiting = useQuery({ ...leadsQuery({ status: 'needs_human' }), enabled: canSee });
 
+  const fresh = useFreshIds(leads.data?.map((l) => l.id) ?? [], `${filter}|${search.trim()}`);
+
   if (me.data && !canSee) {
     return (
       <Card>
@@ -51,10 +54,10 @@ export function LeadsPage() {
   }
 
   return (
-    <Card>
+    <Card className="rise">
       <CardHeader className="flex flex-col gap-3">
         <div className="flex flex-col gap-1.5">
-          <CardTitle>Leads &amp; inbox</CardTitle>
+          <CardTitle className="text-aurora text-2xl font-bold">Leads &amp; inbox</CardTitle>
           <CardDescription>
             Everyone who filled in a form. Anyone who asked for a person is in the inbox.
           </CardDescription>
@@ -104,8 +107,12 @@ export function LeadsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {leads.data.map((lead) => (
-                <TableRow key={lead.id}>
+              {leads.data.map((lead, i) => (
+                <TableRow
+                  key={lead.id}
+                  className={fresh.has(lead.id) ? 'row-flash' : 'rise'}
+                  style={{ '--i': Math.min(i, 12) } as CSSProperties}
+                >
                   <TableCell>
                     <Link to={`/leads/${lead.id}`} className="font-medium hover:underline">
                       {lead.name}
