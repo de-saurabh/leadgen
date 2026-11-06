@@ -11,6 +11,7 @@ import type { Logger } from '../logger.js';
 import type { GraphClient, SendableMessage } from '../whatsapp/graph.js';
 import type { ParsedInbound, ParsedWebhook } from '../whatsapp/webhook.js';
 import type { SecretBox } from './crypto.js';
+import type { EventBus } from './events.js';
 import { createDelivery, windowOpen, type NumberRow } from './delivery.js';
 
 type LeadRow = typeof schema.leads.$inferSelect;
@@ -23,6 +24,17 @@ export interface ConversationDeps {
   templateMode: 'test' | 'live';
   /** Queues the reminders for a confirmed booking. */
   scheduleReminders?: ((bookingId: string) => Promise<unknown>) | undefined;
+  /** Tells open dashboards that something changed. */
+  bus?: EventBus | undefined;
+}
+
+export class LeadError extends Error {
+  constructor(
+    public readonly code: 'not_found' | 'window_closed' | 'bad_state',
+    message: string,
+  ) {
+    super(message);
+  }
 }
 
 /** Statuses in which an incoming message still belongs to a lead's conversation. */
@@ -37,6 +49,7 @@ export function createConversationService({
   logger,
   templateMode,
   scheduleReminders: scheduleReminderJobs,
+  bus,
 }: ConversationDeps) {
   const deliver = createDelivery({ box, graph });
 
@@ -191,9 +204,13 @@ export function createConversationService({
   }
 
   /** A customer with a finished booking writes in: cancel it, move it, or just ask. */
-  async function handleAftercare(number: NumberRow, m: ParsedInbound, storedId: string) {
+  async function handleAftercare(
+    number: NumberRow,
+    m: ParsedInbound,
+    storedId: string,
+  ): Promise<string | undefined> {
     const found = await findUpcomingBooking(number, m.from);
-    if (!found) return;
+    if (!found) return undefined;
     await db
       .update(schema.messages)
       .set({ leadId: found.lead.id })
@@ -275,9 +292,26 @@ export function createConversationService({
       }
     });
     if (newBooking?.status === 'confirmed') await scheduleReminders(newBooking.id);
+    return found.lead.id;
   }
 
   async function processMessage(m: ParsedInbound) {
+    const leadId = await processInbound(m);
+    if (leadId && bus) {
+      const lead = await db
+        .select({ organizationId: schema.leads.organizationId })
+        .from(schema.leads)
+        .where(eq(schema.leads.id, leadId))
+        .limit(1);
+      if (lead[0]) {
+        bus.publish(lead[0].organizationId, { type: 'message', leadId });
+        bus.publish(lead[0].organizationId, { type: 'lead', leadId });
+      }
+    }
+  }
+
+  /** Returns the lead the message belonged to, if any. */
+  async function processInbound(m: ParsedInbound): Promise<string | undefined> {
     const [number] = await db
       .select()
       .from(schema.whatsappNumbers)
@@ -290,7 +324,7 @@ export function createConversationService({
       .limit(1);
     if (!number) {
       logger.warn({ phoneNumberId: m.phoneNumberId }, 'webhook for an unknown WhatsApp number');
-      return;
+      return undefined;
     }
 
     // A redelivered webhook hits the unique index and is dropped here.
@@ -307,13 +341,10 @@ export function createConversationService({
       })
       .onConflictDoNothing({ target: schema.messages.waMessageId })
       .returning({ id: schema.messages.id });
-    if (!stored) return;
+    if (!stored) return undefined;
 
     const found = await findOpenLead(number, m.from);
-    if (!found) {
-      await handleAftercare(number, m, stored.id);
-      return;
-    }
+    if (!found) return handleAftercare(number, m, stored.id);
 
     await db
       .update(schema.messages)
@@ -337,9 +368,98 @@ export function createConversationService({
       newBooking = (await converse(tx, number, lead, context, m.message)).newBooking;
     });
     if (newBooking?.status === 'confirmed') await scheduleReminders(newBooking.id);
+    return found.id;
+  }
+
+  /** The lead, its number and a lock on it, for staff actions. Throws if it is not theirs. */
+  async function withLead<T>(
+    organizationId: string,
+    leadId: string,
+    run: (tx: Tx, lead: LeadRow, number: NumberRow) => Promise<T>,
+  ): Promise<T> {
+    const result = await db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${leadId}, 0))`);
+      const [row] = await tx
+        .select({ lead: schema.leads, number: schema.whatsappNumbers })
+        .from(schema.leads)
+        .innerJoin(schema.campaigns, eq(schema.campaigns.id, schema.leads.campaignId))
+        .innerJoin(
+          schema.whatsappNumbers,
+          eq(schema.whatsappNumbers.id, schema.campaigns.whatsappNumberId),
+        )
+        .where(and(eq(schema.leads.id, leadId), eq(schema.leads.organizationId, organizationId)));
+      if (!row) throw new LeadError('not_found', 'lead not found');
+      return run(tx, row.lead, row.number);
+    });
+    bus?.publish(organizationId, { type: 'lead', leadId });
+    bus?.publish(organizationId, { type: 'message', leadId });
+    return result;
   }
 
   return {
+    /** A person answers in the chat. The bot steps aside until the chat is handed back. */
+    staffReply(input: { organizationId: string; leadId: string; userId: string; text: string }) {
+      return withLead(input.organizationId, input.leadId, async (tx, lead, number) => {
+        if (!windowOpen(lead)) {
+          throw new LeadError(
+            'window_closed',
+            'It has been over 24 hours since they wrote, so WhatsApp only allows a template message.',
+          );
+        }
+        await deliver(tx, number, lead, [{ kind: 'text', body: input.text }], {
+          sentByUserId: input.userId,
+        });
+        if (lead.status === 'new' || lead.status === 'in_conversation') {
+          await tx
+            .update(schema.leads)
+            .set({ status: 'needs_human', botPaused: true })
+            .where(eq(schema.leads.id, lead.id));
+        }
+      });
+    },
+
+    /** The bot takes the chat back and carries on with the next unanswered question. */
+    handBack(input: { organizationId: string; leadId: string }) {
+      return withLead(input.organizationId, input.leadId, async (tx, lead, number) => {
+        if (lead.status !== 'needs_human') {
+          throw new LeadError('bad_state', 'This chat is not waiting for a person.');
+        }
+        if (!windowOpen(lead)) {
+          throw new LeadError(
+            'window_closed',
+            'It has been over 24 hours since they wrote, so the bot cannot message them yet.',
+          );
+        }
+        const context = await loadContext(tx, lead);
+        const { newBooking } = await converse(
+          tx,
+          number,
+          { ...lead, status: 'in_conversation', botPaused: false, currentQuestionId: null },
+          context,
+          { kind: 'text', body: 'continue' },
+        );
+        return newBooking;
+      }).then(async (newBooking) => {
+        if (newBooking?.status === 'confirmed') await scheduleReminders(newBooking.id);
+      });
+    },
+
+    /** The person has dealt with it; nothing more for the bot to do. */
+    closeLead(input: { organizationId: string; leadId: string }) {
+      return withLead(input.organizationId, input.leadId, async (tx, lead) => {
+        if (lead.status === 'completed' || lead.status === 'dropped') {
+          throw new LeadError('bad_state', 'This lead is already closed.');
+        }
+        await tx
+          .update(schema.leads)
+          .set({ status: 'completed', botPaused: false, currentQuestionId: null })
+          .where(eq(schema.leads.id, lead.id));
+        await tx
+          .insert(schema.leadEvents)
+          .values({ leadId: lead.id, campaignId: lead.campaignId, type: 'completed' });
+      });
+    },
+
     /** Handles everything in a webhook payload; one bad message doesn't stop the rest. */
     async handleWebhook(parsed: ParsedWebhook) {
       for (const status of parsed.statuses) {
@@ -422,6 +542,7 @@ export function createConversationService({
         },
       });
       await deliver(db, row.number, row.lead, [{ kind: 'text', body }]);
+      bus?.publish(row.booking.organizationId, { type: 'message', leadId: row.lead.id });
       return true;
     },
 

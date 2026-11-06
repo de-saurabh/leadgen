@@ -7,6 +7,7 @@ import * as schema from './db/schema/index.js';
 import { loadEnv } from './env.js';
 import { createLogger } from './logger.js';
 import { startJobs } from './jobs/jobs.js';
+import { createEventBus } from './services/events.js';
 import { createConversationService } from './services/conversations.js';
 import { createDelivery } from './services/delivery.js';
 import { createReminderService, noopScheduler, type Scheduler } from './services/reminders.js';
@@ -50,8 +51,10 @@ const reminders = secretBox
       scheduler: { scheduleReminder: (job, at) => scheduler.scheduleReminder(job, at) },
     })
   : undefined;
+const bus = createEventBus();
 const conversations = secretBox
   ? createConversationService({
+      bus,
       db,
       box: secretBox,
       graph,
@@ -79,6 +82,7 @@ const app = createApp({
   pingDb: database.ping,
   secretBox,
   conversations,
+  bus,
   metaVerifyToken: env.META_VERIFY_TOKEN,
   metaAppSecret: env.META_APP_SECRET,
   publicConfig: { publicUrl: env.BETTER_AUTH_URL, templateMode: env.WHATSAPP_TEMPLATE_MODE },

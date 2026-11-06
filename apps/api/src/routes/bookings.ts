@@ -5,6 +5,7 @@ import { businessScope, requirePermission } from '../auth/guards.js';
 import { BOOKING_STATUSES } from '../db/schema/booking.js';
 import { BookingError, changeBookingStatus, listBookings } from '../services/bookings.js';
 import type { ConversationService } from '../services/conversations.js';
+import type { EventBus } from '../services/events.js';
 
 const ListQuery = z.object({
   status: z.enum(BOOKING_STATUSES).optional(),
@@ -28,7 +29,7 @@ function fail(res: Response, err: unknown) {
   throw err;
 }
 
-export function bookingsRouter(db: AppDb, conversations?: ConversationService) {
+export function bookingsRouter(db: AppDb, conversations?: ConversationService, bus?: EventBus) {
   const router = Router();
   const read = requirePermission({ booking: ['read'] });
   const update = requirePermission({ booking: ['update'] });
@@ -64,6 +65,7 @@ export function bookingsRouter(db: AppDb, conversations?: ConversationService) {
             return false;
           });
       }
+      bus?.publish(booking.organizationId, { type: 'booking', bookingId: booking.id });
       res.json({ booking, notified });
     } catch (err) {
       fail(res, err);

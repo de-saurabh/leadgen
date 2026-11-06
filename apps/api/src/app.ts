@@ -7,6 +7,10 @@ import type { Auth, AppDb } from './auth/auth.js';
 import type { Logger } from './logger.js';
 import { adminRouter } from './routes/admin.js';
 import { bookingsRouter } from './routes/bookings.js';
+import { leadsRouter } from './routes/leads.js';
+import { streamRouter } from './routes/stream.js';
+import { teamRouter } from './routes/team.js';
+import { createEventBus, type EventBus } from './services/events.js';
 import { businessRouter } from './routes/business.js';
 import { configRouter, type PublicConfig } from './routes/config.js';
 import { campaignsRouter } from './routes/campaigns.js';
@@ -30,6 +34,8 @@ export interface AppDeps {
   onLeadCreated?: ((leadId: string) => void) | undefined;
   /** Handles inbound WhatsApp messages; webhooks are acknowledged but ignored without it. */
   conversations?: ConversationService | undefined;
+  /** Live updates for open dashboards; shared with the conversation service. */
+  bus?: EventBus | undefined;
   metaVerifyToken?: string | undefined;
   metaAppSecret?: string | undefined;
   publicConfig?: PublicConfig | undefined;
@@ -44,6 +50,7 @@ export function createApp({
   secretBox,
   onLeadCreated,
   conversations,
+  bus = createEventBus(),
   metaVerifyToken,
   metaAppSecret,
   publicConfig = { publicUrl: 'http://localhost:3000', templateMode: 'test' },
@@ -84,7 +91,10 @@ export function createApp({
   api.use(businessRouter(db));
   api.use(campaignsRouter(db));
   api.use(resourcesRouter(db));
-  api.use(bookingsRouter(db, conversations));
+  api.use(bookingsRouter(db, conversations, bus));
+  api.use(leadsRouter(db, conversations));
+  api.use(teamRouter({ auth, db }));
+  api.use(streamRouter(bus));
   api.use(whatsappNumbersRouter(db, secretBox));
   api.use('/admin', adminRouter({ auth, db }));
   app.use('/api', api);

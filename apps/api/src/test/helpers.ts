@@ -3,6 +3,7 @@ import { pino } from 'pino';
 import { createApp } from '../app.js';
 import { createAuth } from '../auth/auth.js';
 import { createDb } from '../db/client.js';
+import { createEventBus } from '../services/events.js';
 import { createDelivery } from '../services/delivery.js';
 import { createReminderService, type ReminderJob } from '../services/reminders.js';
 import { createConversationService } from '../services/conversations.js';
@@ -48,6 +49,11 @@ export class TestClient {
   private cookies = new Map<string, string>();
 
   constructor(private readonly baseUrl: string) {}
+
+  /** The cookies this client would send, for requests made outside `request`. */
+  cookieHeader() {
+    return [...this.cookies].map(([name, value]) => `${name}=${value}`).join('; ');
+  }
 
   async request(path: string, init: { method?: string; json?: unknown } = {}) {
     const headers: Record<string, string> = { origin: TEST_ENV.WEB_ORIGIN };
@@ -111,7 +117,9 @@ export async function createTestContext(
     },
     now: () => clock ?? new Date(),
   });
+  const bus = createEventBus();
   const conversations = createConversationService({
+    bus,
     db,
     box,
     graph,
@@ -128,6 +136,7 @@ export async function createTestContext(
     pingDb: overrides.pingDb ?? database.ping,
     secretBox: box,
     conversations,
+    bus,
     metaVerifyToken: TEST_ENV.META_VERIFY_TOKEN,
     metaAppSecret: TEST_ENV.META_APP_SECRET,
     onLeadCreated:
@@ -147,6 +156,7 @@ export async function createTestContext(
     graph,
     conversations,
     reminders,
+    bus,
     scheduled,
     /** Pretends it is this time for reminders; call with no argument to use the real clock. */
     setNow(at?: Date) {

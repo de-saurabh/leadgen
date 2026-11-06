@@ -23,6 +23,7 @@ export function createDelivery({ box, graph }: { box: SecretBox; graph: GraphCli
     number: NumberRow,
     lead: Pick<LeadRow, 'id' | 'organizationId' | 'phone'>,
     messages: SendableMessage[],
+    opts: { sentByUserId?: string } = {},
   ) {
     const target = {
       phoneNumberId: number.phoneNumberId,
@@ -40,6 +41,7 @@ export function createDelivery({ box, graph }: { box: SecretBox; graph: GraphCli
         type: message.kind,
         body: { ...message },
         deliveryStatus: 'sent',
+        sentByUserId: opts.sentByUserId ?? null,
       });
     }
   };
