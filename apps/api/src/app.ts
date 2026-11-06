@@ -9,6 +9,7 @@ import { adminRouter } from './routes/admin.js';
 import { analyticsRouter } from './routes/analytics.js';
 import { bookingsRouter } from './routes/bookings.js';
 import { leadsRouter } from './routes/leads.js';
+import { simulatorRouter } from './routes/simulator.js';
 import { streamRouter } from './routes/stream.js';
 import { teamRouter } from './routes/team.js';
 import * as schema from './db/schema/index.js';
@@ -115,6 +116,7 @@ export function createApp({
   api.use(bookingsRouter(db, conversations, bus));
   api.use(leadsRouter(db, conversations));
   api.use(analyticsRouter(db));
+  api.use(simulatorRouter(db, conversations));
   api.use(teamRouter({ auth, db }));
   api.use(streamRouter(bus));
   api.use(whatsappNumbersRouter(db, secretBox));

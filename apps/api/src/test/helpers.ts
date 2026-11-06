@@ -9,6 +9,7 @@ import { createReminderService, type ReminderJob } from '../services/reminders.j
 import { createConversationService } from '../services/conversations.js';
 import { createSecretBox } from '../services/crypto.js';
 import { ensurePlatformAdmin } from '../services/platformAdmin.js';
+import { withSimulator } from '../whatsapp/simulator.js';
 import type { GraphClient, SendTarget, SendableMessage } from '../whatsapp/graph.js';
 import { ADMIN, TEST_DATABASE_URL, TEST_ENV } from './constants.js';
 
@@ -108,7 +109,7 @@ export async function createTestContext(
   let clock: Date | undefined;
   const reminders = createReminderService({
     db,
-    deliver: createDelivery({ box, graph }),
+    deliver: createDelivery({ box, graph: withSimulator(graph) }),
     logger,
     templateMode: 'test',
     scheduler: {
@@ -123,7 +124,7 @@ export async function createTestContext(
     bus,
     db,
     box,
-    graph,
+    graph: withSimulator(graph),
     logger,
     templateMode: 'test',
     scheduleReminders: reminders.scheduleFor,

@@ -1,3 +1,4 @@
+import { isSimulatorPhone } from '../whatsapp/simulator.js';
 import type { AppDb } from '../auth/auth.js';
 import * as schema from '../db/schema/index.js';
 import type { GraphClient, SendableMessage } from '../whatsapp/graph.js';
@@ -42,6 +43,7 @@ export function createDelivery({ box, graph }: { box: SecretBox; graph: GraphCli
         body: { ...message },
         deliveryStatus: 'sent',
         sentByUserId: opts.sentByUserId ?? null,
+        channel: isSimulatorPhone(lead.phone) ? 'simulator' : 'whatsapp',
       });
     }
   };

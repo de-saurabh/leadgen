@@ -12,6 +12,7 @@ import { createConversationService } from './services/conversations.js';
 import { createDelivery } from './services/delivery.js';
 import { createReminderService, noopScheduler, type Scheduler } from './services/reminders.js';
 import { createSecretBox } from './services/crypto.js';
+import { withSimulator } from './whatsapp/simulator.js';
 import { createDryRunGraphClient, createGraphClient } from './whatsapp/graph.js';
 import { ensurePlatformAdmin } from './services/platformAdmin.js';
 
@@ -36,9 +37,11 @@ if (env.PLATFORM_ADMIN_EMAIL && env.PLATFORM_ADMIN_PASSWORD) {
 }
 
 const secretBox = env.TOKEN_ENCRYPTION_KEY ? createSecretBox(env.TOKEN_ENCRYPTION_KEY) : undefined;
-const graph = env.WHATSAPP_DRY_RUN
-  ? createDryRunGraphClient((line) => logger.info(line))
-  : createGraphClient({ version: env.GRAPH_API_VERSION });
+const graph = withSimulator(
+  env.WHATSAPP_DRY_RUN
+    ? createDryRunGraphClient((line) => logger.info(line))
+    : createGraphClient({ version: env.GRAPH_API_VERSION }),
+);
 // Reminders need a scheduler and the scheduler needs the reminder service, so the
 // service gets a late-bound one that is swapped for pg-boss once that has started.
 let scheduler: Scheduler = noopScheduler;

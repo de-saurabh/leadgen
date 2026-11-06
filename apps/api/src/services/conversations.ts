@@ -1,3 +1,4 @@
+import { isSimulatorPhone } from '../whatsapp/simulator.js';
 import { renderPlaceholders, displayAnswers, type InboundMessage } from '@leadgen/shared';
 import { and, asc, eq, gt, inArray, sql } from 'drizzle-orm';
 import type { AppDb } from '../auth/auth.js';
@@ -338,6 +339,7 @@ export function createConversationService({
         direction: 'in',
         type: m.type,
         body: m.message,
+        channel: isSimulatorPhone(m.from) ? 'simulator' : 'whatsapp',
       })
       .onConflictDoNothing({ target: schema.messages.waMessageId })
       .returning({ id: schema.messages.id });
