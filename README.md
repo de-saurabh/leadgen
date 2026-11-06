@@ -43,8 +43,8 @@ Outgoing messages are logged by the API instead of sent. You can post sample cus
 2. Expose the API: `ngrok http 3000`.
 3. Set `TOKEN_ENCRYPTION_KEY`, `META_VERIFY_TOKEN` (any long string) and `META_APP_SECRET` (App settings, Basic) in `.env`, and leave `WHATSAPP_DRY_RUN` unset. Restart the API.
 4. In the Meta app, set the webhook callback URL to `https://<your-ngrok-host>/webhook` with your `META_VERIFY_TOKEN`, and subscribe to **messages**.
-5. Connect the number (as a business owner): `POST /api/whatsapp-numbers` with `phoneNumberId`, `displayNumber` and `accessToken`. The token is stored encrypted and never shown again.
-6. Create and publish a campaign (`POST /api/campaigns`, then `POST /api/campaigns/:id/publish`). The dashboard builder arrives in M4.
+5. Connect the number (as a business owner) in the dashboard under Settings: Phone number ID, the number customers see, the **WhatsApp Business Account ID** ("Messaging account ID" in Meta) and the access token. The token is stored encrypted and never shown again. Giving the account ID subscribes this app to the account; without that, Meta keeps sending replies to its own sample app and nothing reaches you. Meta's test tokens expire daily: submit the same form again to replace one.
+6. Create and publish a campaign in the dashboard (or use the demo data), choosing that number.
 7. Open `/f/<campaign-slug>`, submit the form with your test-recipient number, and tap **Continue on WhatsApp**.
 
 In test mode (`WHATSAPP_TEMPLATE_MODE=test`, the default) the only template sent is Meta's `hello_world`.

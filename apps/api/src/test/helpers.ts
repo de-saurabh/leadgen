@@ -29,7 +29,14 @@ const TABLES = [
 export class FakeGraph implements GraphClient {
   sent: Array<{ to: string; phoneNumberId: string; message: SendableMessage }> = [];
   failNext = 0;
+  subscribed: string[] = [];
+  failSubscribe = false;
   private counter = 0;
+
+  async subscribeApp(_accessToken: string, wabaId: string) {
+    if (this.failSubscribe) throw new Error('simulated subscribe failure');
+    this.subscribed.push(wabaId);
+  }
 
   async send(target: SendTarget, to: string, message: SendableMessage) {
     if (this.failNext > 0) {
@@ -43,6 +50,8 @@ export class FakeGraph implements GraphClient {
   reset() {
     this.sent = [];
     this.failNext = 0;
+    this.subscribed = [];
+    this.failSubscribe = false;
   }
 }
 
@@ -137,6 +146,7 @@ export async function createTestContext(
     auth,
     pingDb: overrides.pingDb ?? database.ping,
     secretBox: box,
+    graph: withSimulator(graph),
     conversations,
     bus,
     metaVerifyToken: TEST_ENV.META_VERIFY_TOKEN,

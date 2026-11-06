@@ -60,21 +60,26 @@ export function SettingsPage() {
 function ConnectForm() {
   const connect = useConnectNumber();
   const [done, setDone] = useState(false);
+  const [warning, setWarning] = useState('');
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
     setDone(false);
+    setWarning('');
+    const wabaId = String(data.get('wabaId') ?? '').trim();
     connect.mutate(
       {
         phoneNumberId: String(data.get('phoneNumberId')).trim(),
         displayNumber: String(data.get('displayNumber')).trim(),
         accessToken: String(data.get('accessToken')).trim(),
+        ...(wabaId && { wabaId }),
       },
       {
-        onSuccess: () => {
+        onSuccess: (result) => {
           form.reset();
+          setWarning(result.warning ?? '');
           setDone(true);
         },
       },
@@ -118,6 +123,13 @@ function ConnectForm() {
         />
       </div>
       <div className="flex flex-col gap-2">
+        <Label htmlFor="wabaId">WhatsApp Business Account ID (optional)</Label>
+        <Input id="wabaId" name="wabaId" inputMode="numeric" autoComplete="off" />
+        <p className="text-muted-foreground text-xs">
+          Called “Messaging account ID” in Meta. Give it so replies reach this app.
+        </p>
+      </div>
+      <div className="flex flex-col gap-2">
         <Label htmlFor="accessToken">Access token</Label>
         {/* A token for another service, not a sign-in: keep browsers from filling saved logins. */}
         <Input
@@ -133,6 +145,11 @@ function ConnectForm() {
       {error && (
         <p role="alert" className="text-destructive text-sm">
           {error}
+        </p>
+      )}
+      {warning && (
+        <p role="alert" className="text-destructive text-sm">
+          {warning}
         </p>
       )}
       {done && (

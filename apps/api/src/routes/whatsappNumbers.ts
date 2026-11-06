@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { AppDb } from '../auth/auth.js';
 import { businessScope, requirePermission } from '../auth/guards.js';
 import type { SecretBox } from '../services/crypto.js';
+import type { GraphClient } from '../whatsapp/graph.js';
 import {
   NumberError,
   connectNumber,
@@ -20,7 +21,11 @@ const ConnectBody = z.object({
   accessToken: z.string().min(20).max(1000),
 });
 
-export function whatsappNumbersRouter(db: AppDb, box: SecretBox | undefined) {
+export function whatsappNumbersRouter(
+  db: AppDb,
+  box: SecretBox | undefined,
+  graph?: GraphClient | undefined,
+) {
   const router = Router();
 
   router.get(
@@ -50,7 +55,17 @@ export function whatsappNumbersRouter(db: AppDb, box: SecretBox | undefined) {
         return;
       }
       try {
-        res.status(201).json({ number: await connectNumber(db, box, organizationId, body.data) });
+        const number = await connectNumber(db, box, organizationId, body.data);
+        // Without this, Meta keeps sending the account's events to some other app.
+        let warning: string | undefined;
+        if (body.data.wabaId && graph) {
+          try {
+            await graph.subscribeApp(body.data.accessToken, body.data.wabaId);
+          } catch (err) {
+            warning = `Connected, but Meta would not subscribe the app to the account (${err instanceof Error ? err.message : 'unknown error'}). Replies won't arrive until that is fixed.`;
+          }
+        }
+        res.status(201).json({ number, ...(warning && { warning }) });
       } catch (err) {
         if (err instanceof NumberError) {
           res.status(409).json({ error: err.code, message: err.message });

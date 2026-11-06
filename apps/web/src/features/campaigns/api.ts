@@ -100,8 +100,13 @@ export function usePublishCampaign(id: string) {
 export function useConnectNumber() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { phoneNumberId: string; displayNumber: string; accessToken: string }) =>
-      api<{ number: WhatsAppNumber }>('/api/whatsapp-numbers', { json: input }),
+    mutationFn: (input: {
+      phoneNumberId: string;
+      displayNumber: string;
+      accessToken: string;
+      wabaId?: string;
+    }) =>
+      api<{ number: WhatsAppNumber; warning?: string }>('/api/whatsapp-numbers', { json: input }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['whatsapp-numbers'] }),
   });
 }

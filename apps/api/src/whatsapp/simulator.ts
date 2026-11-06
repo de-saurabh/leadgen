@@ -22,5 +22,6 @@ export function withSimulator(inner: GraphClient): GraphClient {
       if (isSimulatorPhone(to)) return Promise.resolve({ waMessageId: `sim.${randomUUID()}` });
       return inner.send(target, to, message);
     },
+    subscribeApp: (accessToken, wabaId) => inner.subscribeApp(accessToken, wabaId),
   };
 }

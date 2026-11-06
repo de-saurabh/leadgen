@@ -43,6 +43,7 @@ connect the real test number (Settings, then connect, then pick it on the campai
 - [ ] Analytics shows numbers on all three businesses
 - [ ] **Try it** completes a booking and the booking appears under Bookings
 - [ ] Live test: Meta test number connected, your phone added as a test recipient, a real form submission produces the template and then the bot
+- [ ] The number was connected with its WhatsApp Business Account ID, and the access token is fresh (Meta's test tokens last about 24 hours)
 - [ ] "Continue on WhatsApp" opens WhatsApp with the right number
 - [ ] The API URL is public and HTTPS, and `BETTER_AUTH_URL` and the Meta webhook URL match it
 - [ ] Wi-Fi fallback: the simulator works with no phone

@@ -84,6 +84,7 @@ const app = createApp({
   auth,
   pingDb: database.ping,
   secretBox,
+  graph,
   conversations,
   bus,
   metaVerifyToken: env.META_VERIFY_TOKEN,

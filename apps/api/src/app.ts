@@ -25,6 +25,7 @@ import { webhookRouter } from './routes/webhook.js';
 import { whatsappNumbersRouter } from './routes/whatsappNumbers.js';
 import type { ConversationService } from './services/conversations.js';
 import type { SecretBox } from './services/crypto.js';
+import type { GraphClient } from './whatsapp/graph.js';
 
 export interface AppDeps {
   logger: Logger;
@@ -33,6 +34,8 @@ export interface AppDeps {
   pingDb: () => Promise<void>;
   /** Encrypts stored WhatsApp tokens; absent when TOKEN_ENCRYPTION_KEY isn't set. */
   secretBox?: SecretBox | undefined;
+  /** Talks to Meta; used to subscribe the app to a number's WhatsApp account. */
+  graph?: GraphClient | undefined;
   /** Called with the new lead id after a form submission is saved. */
   onLeadCreated?: ((leadId: string) => void) | undefined;
   /** Handles inbound WhatsApp messages; webhooks are acknowledged but ignored without it. */
@@ -51,6 +54,7 @@ export function createApp({
   auth,
   pingDb,
   secretBox,
+  graph,
   onLeadCreated,
   conversations,
   bus = createEventBus(),
@@ -119,7 +123,7 @@ export function createApp({
   api.use(simulatorRouter(db, conversations));
   api.use(teamRouter({ auth, db }));
   api.use(streamRouter(bus));
-  api.use(whatsappNumbersRouter(db, secretBox));
+  api.use(whatsappNumbersRouter(db, secretBox, graph));
   api.use('/admin', adminRouter({ auth, db }));
   app.use('/api', api);
   app.use('/api', (_req, res) => {

@@ -19,6 +19,11 @@ export interface SendTarget {
 export interface GraphClient {
   /** Sends one message and returns Meta's id for it. Throws `GraphError` on failure. */
   send(target: SendTarget, to: string, message: SendableMessage): Promise<{ waMessageId: string }>;
+  /**
+   * Makes Meta deliver this WhatsApp account's events (replies, delivery receipts) to our app.
+   * A number connected by hand is not subscribed to our app until this is done.
+   */
+  subscribeApp(accessToken: string, wabaId: string): Promise<void>;
 }
 
 export class GraphError extends Error {
@@ -123,6 +128,23 @@ export function createGraphClient(opts: { version: string; fetch?: typeof fetch 
       }
       return { waMessageId: id };
     },
+    async subscribeApp(accessToken, wabaId) {
+      const res = await doFetch(
+        `https://graph.facebook.com/${opts.version}/${wabaId}/subscribed_apps`,
+        { method: 'POST', headers: { authorization: `Bearer ${accessToken}` } },
+      );
+      const json = (await res.json().catch(() => ({}))) as {
+        success?: boolean;
+        error?: { message?: string; code?: number };
+      };
+      if (!res.ok || json.success !== true) {
+        throw new GraphError(
+          res.status,
+          json.error?.message ?? `Subscribing to the account failed with status ${res.status}`,
+          json.error?.code,
+        );
+      }
+    },
   };
 }
 
@@ -132,6 +154,9 @@ export function createDryRunGraphClient(log: (line: string) => void): GraphClien
     async send(_target, to, message) {
       log(`[dry-run] to ${to}: ${JSON.stringify(message)}`);
       return { waMessageId: `dry-run.${randomUUID()}` };
+    },
+    async subscribeApp(_accessToken, wabaId) {
+      log(`[dry-run] subscribe the app to account ${wabaId}`);
     },
   };
 }

@@ -89,6 +89,29 @@ describe('graph client', () => {
     expect(String(error.stack)).not.toContain('secret-token');
   });
 
+  it('subscribes the app to a WhatsApp account, and fails loudly when Meta says no', async () => {
+    let seen: { url: string; method?: string | undefined } | undefined;
+    const ok = createGraphClient({
+      version: 'v26.0',
+      fetch: (async (url: string, init: RequestInit) => {
+        seen = { url, method: init.method };
+        return Response.json({ success: true });
+      }) as typeof fetch,
+    });
+    await ok.subscribeApp('secret-token', '777');
+    expect(seen).toEqual({
+      url: 'https://graph.facebook.com/v26.0/777/subscribed_apps',
+      method: 'POST',
+    });
+
+    const no = createGraphClient({
+      version: 'v26.0',
+      fetch: (async () =>
+        Response.json({ error: { message: 'Not allowed' } }, { status: 403 })) as typeof fetch,
+    });
+    await expect(no.subscribeApp('secret-token', '777')).rejects.toBeInstanceOf(GraphError);
+  });
+
   it('treats an ok response without a message id as a failure', async () => {
     const client = createGraphClient({
       version: 'v26.0',

@@ -58,6 +58,26 @@ describe('whatsapp numbers', () => {
     expect(rows[0]!.accessTokenEnc).not.toBe(before!.accessTokenEnc);
   });
 
+  it('subscribes the app to the WhatsApp account, and says so when Meta refuses', async () => {
+    const body = {
+      phoneNumberId: '1000000000001',
+      wabaId: '777000111',
+      displayNumber: '919876543210',
+      accessToken: 'EAAG-this-is-a-long-fake-access-token-1234567890',
+    };
+    ctx.graph.reset();
+    const ok = await a.owner.request('/api/whatsapp-numbers', { json: body });
+    expect(ok.status).toBe(201);
+    expect(ok.body.warning).toBeUndefined();
+    expect(ctx.graph.subscribed).toEqual(['777000111']);
+
+    ctx.graph.failSubscribe = true;
+    const refused = await a.owner.request('/api/whatsapp-numbers', { json: body });
+    expect(refused.status).toBe(201);
+    expect(refused.body.warning).toContain('subscribe');
+    ctx.graph.reset();
+  });
+
   it('keeps numbers private to their business', async () => {
     expect((await b.owner.request('/api/whatsapp-numbers')).body.numbers).toEqual([]);
     const del = await b.owner.request(`/api/whatsapp-numbers/${numberId}`, { method: 'DELETE' });
