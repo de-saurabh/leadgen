@@ -2,6 +2,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { NavLink, Navigate, Outlet, useNavigate } from 'react-router';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useLiveUpdates } from '@/features/ops/live';
@@ -84,6 +85,7 @@ export function AppLayout() {
           </nav>
           <div className="ml-auto flex items-center gap-3 text-sm">
             <span className="text-muted-foreground hidden sm:inline">{user.email}</span>
+            <ThemeToggle />
             <Button size="sm" variant="outline" onClick={signOut}>
               Sign out
             </Button>
