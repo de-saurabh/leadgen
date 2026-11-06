@@ -44,6 +44,20 @@ describe('whatsapp numbers', () => {
     expect(res.status).toBe(409);
   });
 
+  it('lets the owner reconnect their own number to replace an expired token', async () => {
+    const [before] = await ctx.db.select().from(schema.whatsappNumbers);
+    const fresh = 'EAAG-a-brand-new-and-long-fake-access-token-0987654321';
+    const res = await a.owner.request('/api/whatsapp-numbers', {
+      json: { phoneNumberId: '1000000000001', displayNumber: '919876543210', accessToken: fresh },
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.number.id).toBe(numberId);
+    expect(JSON.stringify(res.body)).not.toContain(fresh);
+    const rows = await ctx.db.select().from(schema.whatsappNumbers);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.accessTokenEnc).not.toBe(before!.accessTokenEnc);
+  });
+
   it('keeps numbers private to their business', async () => {
     expect((await b.owner.request('/api/whatsapp-numbers')).body.numbers).toEqual([]);
     const del = await b.owner.request(`/api/whatsapp-numbers/${numberId}`, { method: 'DELETE' });

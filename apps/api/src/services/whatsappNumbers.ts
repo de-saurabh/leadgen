@@ -37,11 +37,30 @@ export async function connectNumber(
   input: ConnectNumberInput,
 ) {
   const [existing] = await db
-    .select({ id: schema.whatsappNumbers.id })
+    .select({
+      id: schema.whatsappNumbers.id,
+      organizationId: schema.whatsappNumbers.organizationId,
+    })
     .from(schema.whatsappNumbers)
     .where(eq(schema.whatsappNumbers.phoneNumberId, input.phoneNumberId))
     .limit(1);
-  if (existing) throw new NumberError('already_connected', 'That number is already connected');
+  if (existing && existing.organizationId !== organizationId) {
+    throw new NumberError('already_connected', 'That number is already connected');
+  }
+  if (existing) {
+    // Connecting your own number again replaces its token (Meta's test tokens expire daily).
+    const [row] = await db
+      .update(schema.whatsappNumbers)
+      .set({
+        wabaId: input.wabaId ?? null,
+        displayNumber: input.displayNumber.replace(/D/g, ''),
+        accessTokenEnc: box.encrypt(input.accessToken),
+        status: 'active',
+      })
+      .where(eq(schema.whatsappNumbers.id, existing.id))
+      .returning(publicColumns);
+    return row!;
+  }
 
   const [row] = await db
     .insert(schema.whatsappNumbers)
