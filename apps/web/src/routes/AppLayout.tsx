@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { NavLink, Navigate, Outlet, useNavigate } from 'react-router';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useLiveUpdates } from '@/features/ops/live';
 import { useMe } from '@/features/session/me';
 import { authClient } from '@/lib/auth-client';
 
@@ -12,6 +13,7 @@ export function AppLayout() {
   const me = useMe();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  useLiveUpdates(!!me.data?.business);
 
   if (me.isPending) return <p className="text-muted-foreground p-6 text-sm">Loading…</p>;
   if (!me.data) return <Navigate to="/login" replace />;
@@ -57,12 +59,18 @@ export function AppLayout() {
                 Campaigns
               </NavItem>
             )}
+            {role && roleCan(role, { lead: ['read'] }) && (
+              <NavItem to="/leads" end={false}>
+                Leads
+              </NavItem>
+            )}
             {role && roleCan(role, { booking: ['read'] }) && (
               <NavItem to="/bookings">Bookings</NavItem>
             )}
             {role && roleCan(role, { resource: ['read'] }) && (
               <NavItem to="/bookable">Bookable</NavItem>
             )}
+            {role && roleCan(role, { resource: ['read'] }) && <NavItem to="/team">Team</NavItem>}
             {role && roleCan(role, { whatsappNumber: ['read'] }) && (
               <NavItem to="/settings">Settings</NavItem>
             )}

@@ -31,6 +31,7 @@ export interface ResourceInput {
   slotMinutes: number;
   active?: boolean;
   hours?: HoursRow[];
+  memberUserId?: string | null;
 }
 
 export interface BizEvent {

@@ -20,6 +20,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { useQuery } from '@tanstack/react-query';
+import { teamQuery } from '@/features/ops/api';
 import {
   RESOURCE_KINDS,
   messageFromError,
@@ -87,6 +89,8 @@ function ResourceForm({
   const [slotMinutes, setSlotMinutes] = useState(String(resource?.slotMinutes ?? 30));
   const [active, setActive] = useState(resource?.active ?? true);
   const [hours, setHours] = useState<HoursRow[]>(resource?.hours ?? defaultHours());
+  const [staff, setStaff] = useState<string>(resource?.memberUserId ?? 'none');
+  const team = useQuery(teamQuery);
 
   const problem = hoursProblem(hours);
 
@@ -101,6 +105,7 @@ function ResourceForm({
         slotMinutes: Number(slotMinutes),
         active,
         hours,
+        memberUserId: staff === 'none' ? null : staff,
       },
       { onSuccess: onDone },
     );
@@ -146,6 +151,28 @@ function ResourceForm({
           </SelectContent>
         </Select>
       </div>
+
+      {kind === 'person' && team.data && (
+        <div className="flex flex-col gap-2">
+          <Label>Linked staff member</Label>
+          <Select value={staff} onValueChange={setStaff}>
+            <SelectTrigger aria-label="Linked staff member">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Nobody (not a team member)</SelectItem>
+              {team.data.map((m) => (
+                <SelectItem key={m.userId} value={m.userId}>
+                  {m.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-muted-foreground text-xs">
+            They will see this person&apos;s bookings when signed in as a member.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-2">

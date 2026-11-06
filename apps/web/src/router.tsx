@@ -5,8 +5,11 @@ import { CampaignBuilderPage } from './routes/CampaignBuilderPage';
 import { CampaignsPage } from './routes/CampaignsPage';
 import { AppLayout } from './routes/AppLayout';
 import { HomePage } from './routes/HomePage';
+import { LeadPage } from './routes/LeadPage';
+import { LeadsPage } from './routes/LeadsPage';
 import { LoginPage } from './routes/LoginPage';
 import { ResourcesPage } from './routes/ResourcesPage';
+import { TeamPage } from './routes/TeamPage';
 import { SettingsPage } from './routes/SettingsPage';
 
 export const router = createBrowserRouter([
@@ -17,6 +20,9 @@ export const router = createBrowserRouter([
       { index: true, element: <HomePage /> },
       { path: 'campaigns', element: <CampaignsPage /> },
       { path: 'campaigns/:id', element: <CampaignBuilderPage /> },
+      { path: 'leads', element: <LeadsPage /> },
+      { path: 'leads/:id', element: <LeadPage /> },
+      { path: 'team', element: <TeamPage /> },
       { path: 'bookings', element: <BookingsPage /> },
       { path: 'bookable', element: <ResourcesPage /> },
       { path: 'settings', element: <SettingsPage /> },
