@@ -114,7 +114,7 @@ export async function getLead(db: AppDb, organizationId: string, id: string) {
       key: q.key,
       question: renderPlaceholders(q.prompt, labelContext),
       type: q.type,
-      value: row.lead.answers[q.key],
+      value: labelContext.answers[q.key],
     }));
 
   return {

@@ -63,7 +63,7 @@ export function ResourceDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="max-h-[90svh] overflow-y-auto">
+      <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-xl">
         {/* Mounted only while open, so every opening starts from the saved values. */}
         {open && (
           <ResourceForm resource={resource} timeZone={timeZone} onDone={() => setOpen(false)} />

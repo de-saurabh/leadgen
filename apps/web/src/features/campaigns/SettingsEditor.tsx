@@ -13,6 +13,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import type { PublicConfig, WhatsAppNumber } from './api';
+import { confirmationForGoal } from './draft';
 import { offsetsToText, textToOffsets } from './helpers';
 
 type Settings = CampaignConfigInput['settings'];
@@ -86,7 +87,10 @@ export function SettingsEditor({
           >
             <Select
               value={settings.goal ?? 'lead'}
-              onValueChange={(goal) => set({ goal: goal as 'lead' | 'booking' })}
+              onValueChange={(value) => {
+                const goal = value as 'lead' | 'booking';
+                set({ goal, confirmation: confirmationForGoal(settings.confirmation, goal) });
+              }}
             >
               <SelectTrigger aria-label="Goal">
                 <SelectValue />

@@ -109,10 +109,18 @@ describe('leads', () => {
     expect(res.status).toBe(200);
     expect(res.body.lead).toMatchObject({ name: 'Asha Rao', status: 'in_conversation' });
     expect(res.body.answers).toEqual([
-      { key: 'budget', question: 'What is your budget?', type: 'single_choice', value: 'high' },
+      { key: 'budget', question: 'What is your budget?', type: 'single_choice', value: 'High' },
     ]);
     const directions = res.body.messages.map((m: { direction: string }) => m.direction);
     expect(directions).toEqual(['out', 'in', 'out', 'in', 'out']);
+  });
+
+  it('tells open dashboards when a new lead arrives', async () => {
+    const events: Array<{ type: string }> = [];
+    const stop = ctx.bus.subscribe(orgId, (e) => events.push(e));
+    const lead = await newLead('919876500020');
+    stop();
+    expect(events).toContainEqual({ type: 'lead', leadId: lead.id });
   });
 
   it('keeps businesses apart', async () => {

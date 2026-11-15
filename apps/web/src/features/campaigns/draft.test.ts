@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { validateCampaign } from '@leadgen/shared';
 import {
   changeType,
+  confirmationForGoal,
+  DEFAULT_CONFIRMATION,
   emptyDraft,
   issuesForCampaign,
   issuesForQuestion,
@@ -117,5 +119,24 @@ describe('issue grouping', () => {
 
   it('keeps list-level and settings issues for the campaign', () => {
     expect(issuesForCampaign(issues).map((i) => i.message)).toEqual(['c', 'd']);
+  });
+});
+
+describe('confirmationForGoal', () => {
+  it('swaps an untouched default when the goal changes', () => {
+    expect(confirmationForGoal(DEFAULT_CONFIRMATION.lead, 'booking')).toBe(
+      DEFAULT_CONFIRMATION.booking,
+    );
+    expect(confirmationForGoal(DEFAULT_CONFIRMATION.booking, 'lead')).toBe(
+      DEFAULT_CONFIRMATION.lead,
+    );
+  });
+
+  it('keeps text the owner wrote', () => {
+    expect(confirmationForGoal('See you soon!', 'booking')).toBe('See you soon!');
+  });
+
+  it('fills in a missing confirmation', () => {
+    expect(confirmationForGoal(undefined, 'booking')).toBe(DEFAULT_CONFIRMATION.booking);
   });
 });

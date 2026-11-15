@@ -72,7 +72,7 @@ export function ShareDialog({
       <DialogTrigger asChild>
         <Button variant="outline">Share</Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90svh] overflow-y-auto">
+      <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Share “{campaignName}”</DialogTitle>
           <DialogDescription>

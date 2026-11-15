@@ -29,7 +29,7 @@ export function EventDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="max-h-[90svh] overflow-y-auto">
+      <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-lg">
         {open && <EventForm event={event} timeZone={timeZone} onDone={() => setOpen(false)} />}
       </DialogContent>
     </Dialog>

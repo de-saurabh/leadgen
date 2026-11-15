@@ -592,7 +592,13 @@ export function createConversationService({
               language: configured.language,
               params: configured.params.map((p) => renderPlaceholders(p, ctx)),
             };
-      await deliver(db, row.number, lead, [message]);
+      try {
+        await deliver(db, row.number, lead, [message]);
+      } finally {
+        // The lead exists whether or not the first message got out, so open dashboards should see it.
+        bus?.publish(lead.organizationId, { type: 'lead', leadId });
+        bus?.publish(lead.organizationId, { type: 'message', leadId });
+      }
     },
   };
 }

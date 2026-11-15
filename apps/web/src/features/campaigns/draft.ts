@@ -55,12 +55,33 @@ export function uniqueId(base: string, taken: ReadonlySet<string>): string {
   }
 }
 
+export const DEFAULT_CONFIRMATION = {
+  lead: 'Thanks {{name}}! {{business}} will be in touch shortly.',
+  booking:
+    'Booked, {{name}}! {{booking.date}} at {{booking.time}} with {{booking.resource}}. See you at {{business}}.',
+} as const;
+
+/**
+ * The confirmation to use after the goal changes: an untouched default follows the goal,
+ * while text the owner wrote is left alone.
+ */
+export function confirmationForGoal(
+  current: string | undefined,
+  goal: 'lead' | 'booking',
+): string | undefined {
+  const untouched =
+    current === undefined ||
+    current === DEFAULT_CONFIRMATION.lead ||
+    current === DEFAULT_CONFIRMATION.booking;
+  return untouched ? DEFAULT_CONFIRMATION[goal] : current;
+}
+
 export function emptyDraft(): CampaignConfigInput {
   return {
     questions: [],
     settings: {
       goal: 'lead',
-      confirmation: 'Thanks {{name}}! {{business}} will be in touch shortly.',
+      confirmation: DEFAULT_CONFIRMATION.lead,
     },
   };
 }
