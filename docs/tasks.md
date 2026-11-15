@@ -28,7 +28,7 @@ Legend: **P1** do next · **P2** soon · **P3** later. Source: **A** = found in 
 - [ ] **P2 · A** "Enable edits" toggle for impersonation (plan: read-only by default), still audited
 - [ ] **P2 · A** Admin can connect a WhatsApp number for a business (plan item; today only owners can)
 - [ ] **P2 · A** A way to delete or disable a business (test data can't be removed from the UI)
-- [ ] **P1 · A** Exclude simulator leads from analytics by default (plan item)
+- [x] **P1 · A** Exclude simulator leads from analytics by default (plan item) (done)
 
 ## 3. Missing owner features
 

@@ -149,13 +149,23 @@ export interface Analytics {
   dropOff?: Array<{ id: string; prompt: string; answered: number }>;
 }
 
-export const analyticsQuery = (filters: { days: number; campaignId?: string }) =>
+export const analyticsQuery = (filters: {
+  days: number;
+  campaignId?: string;
+  includeSimulator?: boolean;
+}) =>
   queryOptions({
-    queryKey: ['analytics', filters.days, filters.campaignId ?? 'all'],
+    queryKey: [
+      'analytics',
+      filters.days,
+      filters.campaignId ?? 'all',
+      filters.includeSimulator ?? false,
+    ],
     queryFn: () => {
       const params = new URLSearchParams();
       params.set('from', new Date(Date.now() - filters.days * 86_400_000).toISOString());
       if (filters.campaignId) params.set('campaignId', filters.campaignId);
+      if (filters.includeSimulator) params.set('includeSimulator', 'true');
       return api<Analytics>(`/api/analytics?${params.toString()}`);
     },
   });

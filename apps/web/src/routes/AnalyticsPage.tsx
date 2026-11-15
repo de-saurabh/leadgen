@@ -37,9 +37,14 @@ export function AnalyticsPage() {
   const allowed = me.data?.role ? roleCan(me.data.role, { analytics: ['read'] }) : false;
   const [days, setDays] = useState(30);
   const [campaignId, setCampaignId] = useState(ALL);
+  const [includeSimulator, setIncludeSimulator] = useState(false);
   const campaigns = useQuery({ ...campaignsQuery, enabled: allowed });
   const data = useQuery({
-    ...analyticsQuery({ days, campaignId: campaignId === ALL ? undefined : campaignId }),
+    ...analyticsQuery({
+      days,
+      campaignId: campaignId === ALL ? undefined : campaignId,
+      includeSimulator,
+    }),
     enabled: allowed,
   });
 
@@ -61,7 +66,15 @@ export function AnalyticsPage() {
     <div className="flex flex-col gap-6">
       <div className="rise flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-aurora text-2xl font-bold tracking-tight">Analytics</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="text-muted-foreground flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={includeSimulator}
+              onChange={(e) => setIncludeSimulator(e.target.checked)}
+            />
+            Include test leads
+          </label>
           <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
             <SelectTrigger className="w-40" aria-label="Date range">
               <SelectValue />

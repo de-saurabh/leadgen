@@ -1,11 +1,14 @@
 import { and, eq, sql } from 'drizzle-orm';
 import type { AppDb } from '../auth/auth.js';
+import { SIMULATOR_PREFIX } from '../whatsapp/simulator.js';
 import * as schema from '../db/schema/index.js';
 
 export interface AnalyticsFilters {
   from: Date;
   to: Date;
   campaignId?: string | undefined;
+  /** Leads from the "Try it" simulator are left out unless asked for. */
+  includeSimulator?: boolean | undefined;
 }
 
 interface Counts {
@@ -55,6 +58,9 @@ export async function loadAnalytics(db: AppDb, organizationId: string, filters: 
     sql`${schema.leads.createdAt} >= ${filters.from}`,
     sql`${schema.leads.createdAt} < ${filters.to}`,
     filters.campaignId ? eq(schema.leads.campaignId, filters.campaignId) : undefined,
+    filters.includeSimulator
+      ? undefined
+      : sql`${schema.leads.phone} not like ${SIMULATOR_PREFIX + '%'}`,
   );
 
   const grouped = await db

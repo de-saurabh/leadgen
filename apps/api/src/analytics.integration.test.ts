@@ -126,4 +126,13 @@ describe('analytics', () => {
     const peek = await other.request(`/api/analytics?campaignId=${campaignId}`);
     expect(peek.body.dropOff).toBeUndefined();
   });
+
+  it('leaves out simulator leads unless asked', async () => {
+    const started = await owner.request('/api/simulator/start', { json: { campaignId } });
+    expect(started.status).toBe(201);
+    const plain = await owner.request('/api/analytics');
+    expect(plain.body.totals.leads).toBe(3);
+    const withTests = await owner.request('/api/analytics?includeSimulator=true');
+    expect(withTests.body.totals.leads).toBe(4);
+  });
 });

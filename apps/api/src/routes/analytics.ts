@@ -8,6 +8,7 @@ const Query = z.object({
   from: z.coerce.date().optional(),
   to: z.coerce.date().optional(),
   campaignId: z.uuid().optional(),
+  includeSimulator: z.enum(['true', 'false']).optional(),
 });
 
 const DAY = 86_400_000;
@@ -26,7 +27,12 @@ export function analyticsRouter(db: AppDb) {
     const to = query.data.to ?? new Date(Date.now() + DAY);
     const from = query.data.from ?? new Date(to.getTime() - 31 * DAY);
     res.json(
-      await loadAnalytics(db, organizationId, { from, to, campaignId: query.data.campaignId }),
+      await loadAnalytics(db, organizationId, {
+        from,
+        to,
+        campaignId: query.data.campaignId,
+        includeSimulator: query.data.includeSimulator === 'true',
+      }),
     );
   });
 
