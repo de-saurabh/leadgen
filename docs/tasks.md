@@ -6,10 +6,10 @@ Legend: **P1** do next · **P2** soon · **P3** later. Source: **A** = found in 
 
 ## 1. Bugs found in the audit
 
-- [ ] **P1 · A** Dialogs too narrow: bookable person, event and Share dialogs clip hours rows and buttons and scroll sideways (`DialogContent` keeps `sm:max-w-sm`; pass a wider class)
-- [ ] **P1 · A** New booking campaigns keep the lead-style confirmation ("will be in touch shortly") with no date/time; switching the goal to booking should swap in a booking default
-- [ ] **P1 · A** Lead page Answers shows raw option ids (`check_up`) instead of labels ("Check-up"); API returns raw `value`
-- [ ] **P1 · A** New leads don't appear live: no event is published when a lead is created (form or simulator), only on messages
+- [x] **P1 · A** Dialogs too narrow: bookable person, event and Share dialogs clip hours rows and buttons and scroll sideways (`DialogContent` keeps `sm:max-w-sm`; pass a wider class) (718b588)
+- [x] **P1 · A** New booking campaigns keep the lead-style confirmation ("will be in touch shortly") with no date/time; switching the goal to booking should swap in a booking default (718b588)
+- [x] **P1 · A** Lead page Answers shows raw option ids (`check_up`) instead of labels ("Check-up"); API returns raw `value` (718b588)
+- [x] **P1 · A** New leads don't appear live: no event is published when a lead is created (form or simulator), only on messages (718b588)
 - [ ] **P2 · A** Native `window.confirm` popups on Team Remove and on Delete for people and events: replace with the app's own confirm dialog
 - [ ] **P2 · A** Cancelling a booking from the dashboard has no confirmation at all
 - [ ] **P2 · A** Public form and thank-you page are plain white/green: restyle to match Aurora (light and dark)
