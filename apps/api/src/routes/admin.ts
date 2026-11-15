@@ -65,6 +65,21 @@ export function adminRouter(deps: { auth: Auth; db: AppDb }) {
     res.json({ businesses: await listBusinesses(deps.db) });
   });
 
+  router.get('/businesses/:id/members', async (req, res) => {
+    const rows = await deps.db
+      .select({
+        userId: schema.user.id,
+        name: schema.user.name,
+        email: schema.user.email,
+        role: schema.member.role,
+      })
+      .from(schema.member)
+      .innerJoin(schema.user, eq(schema.user.id, schema.member.userId))
+      .where(eq(schema.member.organizationId, req.params.id))
+      .orderBy(schema.user.name);
+    res.json({ members: rows });
+  });
+
   router.post('/businesses', async (req, res) => {
     const body = CreateBusinessBody.safeParse(req.body);
     if (!body.success) {

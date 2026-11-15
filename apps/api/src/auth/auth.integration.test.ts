@@ -276,6 +276,23 @@ describe('platform admin impersonation (Better Auth admin plugin)', () => {
   });
 });
 
+describe('admin can list the people in a business', () => {
+  it('returns members with roles, and refuses non-admins', async () => {
+    const org = await ctx.db.query.organization.findFirst({
+      where: eq(schema.organization.name, CLINIC.name),
+    });
+    const res = await admin.request(`/api/admin/businesses/${org!.id}/members`);
+    expect(res.status).toBe(200);
+    expect(res.body.members).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ email: CLINIC.owner.email, role: 'owner' }),
+      ]),
+    );
+    const anon = await ctx.client().request(`/api/admin/businesses/${org!.id}/members`);
+    expect([401, 403]).toContain(anon.status);
+  });
+});
+
 describe('viewing as someone is read-only and audited', () => {
   it('allows reads, blocks writes, and records all of it', async () => {
     await ctx.db.delete(schema.auditLog);

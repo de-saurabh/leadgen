@@ -24,7 +24,7 @@ Legend: **P1** do next · **P2** soon · **P3** later. Source: **A** = found in 
 
 ## 2. Admin and platform
 
-- [ ] **P1 · A** "View as" in the UI: admin API to list a business's users, a button on the Businesses page, redirect into the business, Exit via the banner
+- [x] **P1 · A** "View as" in the UI: admin API to list a business's users, a button on the Businesses page, redirect into the business, Exit via the banner (done)
 - [ ] **P2 · A** "Enable edits" toggle for impersonation (plan: read-only by default), still audited
 - [ ] **P2 · A** Admin can connect a WhatsApp number for a business (plan item; today only owners can)
 - [ ] **P2 · A** A way to delete or disable a business (test data can't be removed from the UI)

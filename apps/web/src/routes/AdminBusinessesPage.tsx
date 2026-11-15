@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
-import { Navigate } from 'react-router';
+import { Navigate, useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/table';
 import { useMe } from '@/features/session/me';
 import { api, ApiError } from '@/lib/api';
+import { authClient } from '@/lib/auth-client';
 
 interface BusinessSummary {
   id: string;
@@ -82,6 +83,7 @@ export function AdminBusinessesPage() {
                   <TableHead>Timezone</TableHead>
                   <TableHead className="text-right">People</TableHead>
                   <TableHead>Created</TableHead>
+                  <TableHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -92,6 +94,9 @@ export function AdminBusinessesPage() {
                     <TableCell>{business.timezone ?? '—'}</TableCell>
                     <TableCell className="text-right">{business.memberCount}</TableCell>
                     <TableCell>{new Date(business.createdAt).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-right">
+                      <ViewAsDialog business={business} />
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -101,6 +106,83 @@ export function AdminBusinessesPage() {
       </Card>
       <AuditCard enabled={me.data?.isPlatformAdmin === true} />
     </div>
+  );
+}
+
+interface Member {
+  userId: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
+function ViewAsDialog({ business }: { business: BusinessSummary }) {
+  const [open, setOpen] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const members = useQuery({
+    queryKey: ['admin', 'members', business.id],
+    queryFn: () => api<{ members: Member[] }>(`/api/admin/businesses/${business.id}/members`),
+    enabled: open,
+  });
+
+  const start = useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await authClient.admin.impersonateUser({ userId });
+      if (res.error) throw new Error(res.error.message);
+    },
+    onSuccess: async () => {
+      queryClient.clear();
+      navigate('/', { replace: true });
+    },
+    onError: () => setFailed(true),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline">
+          View as…
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>View {business.name} as…</DialogTitle>
+          <DialogDescription>
+            Read-only for 30 minutes. Every view is written to the audit log.
+          </DialogDescription>
+        </DialogHeader>
+        {members.isPending ? (
+          <p className="text-muted-foreground text-sm">Loading…</p>
+        ) : members.isError ? (
+          <p className="text-destructive text-sm">Could not load people.</p>
+        ) : members.data.members.length === 0 ? (
+          <p className="text-muted-foreground text-sm">Nobody in this business yet.</p>
+        ) : (
+          <ul className="divide-y text-sm">
+            {members.data.members.map((m) => (
+              <li key={m.userId} className="flex items-center justify-between gap-3 py-2">
+                <span className="min-w-0">
+                  <span className="block truncate font-medium">{m.name}</span>
+                  <span className="text-muted-foreground block truncate text-xs">
+                    {m.email} · {m.role}
+                  </span>
+                </span>
+                <Button size="sm" disabled={start.isPending} onClick={() => start.mutate(m.userId)}>
+                  View
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {failed && (
+          <p role="alert" className="text-destructive text-sm">
+            Could not start viewing. Try again.
+          </p>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
